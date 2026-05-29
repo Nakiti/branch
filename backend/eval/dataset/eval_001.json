@@ -1,0 +1,21 @@
+{
+  "id": "eval_001",
+  "description": "Branch explores attention mechanism deeper, parent asked about training",
+  "fork_point_index": 1,
+  "parent_context": [
+    { "role": "user", "content": "Explain transformer architecture at a high level" },
+    { "role": "assistant", "content": "Transformers process sequences by letting every token attend to every other token simultaneously. The core building block is self-attention, which computes learned query, key, and value matrices from the input. Unlike RNNs, there is no recurrence — the entire sequence is processed in parallel, which is why transformers scale so well on modern hardware. Positional encodings are added to give the model a sense of token order." }
+  ],
+  "branch_context": [
+    { "role": "user", "content": "Go deeper on the attention mechanism specifically" },
+    { "role": "assistant", "content": "Attention computes a weighted sum of value vectors. The weights come from softmax(QK^T / sqrt(d_k)), where Q and K are the query and key matrices. The sqrt(d_k) scaling prevents dot products from growing too large in high dimensions, which would push the softmax into regions with vanishing gradients." },
+    { "role": "user", "content": "Why does multi-head attention help over single-head?" },
+    { "role": "assistant", "content": "Multi-head attention runs the attention mechanism in parallel across multiple subspaces. Each head learns to attend to different types of relationships — one head might capture syntactic dependencies, another semantic similarity, another coreference. The outputs are concatenated and linearly projected back to the original dimension. This gives the model much richer representational capacity than a single attention head could provide." }
+  ],
+  "ideal_merge": "Attention works by computing softmax(QK^T / sqrt(d_k)) weighted sums over value vectors — the sqrt(d_k) scaling is critical to prevent vanishing gradients. Multi-head attention runs this in parallel across subspaces so different heads can specialize in different relationship types (syntactic, semantic, etc.), which is a key reason transformers are so expressive.",
+  "key_conclusions": [
+    "scaling by sqrt(d_k) prevents vanishing gradients in high dimensions",
+    "multi-head attention runs attention in parallel across multiple subspaces",
+    "different heads specialize in different relationship types"
+  ]
+}

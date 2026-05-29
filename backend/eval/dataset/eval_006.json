@@ -1,0 +1,24 @@
+{
+  "id": "eval_006",
+  "description": "Branch explores LLM-as-judge reliability and failure modes — meta topic directly relevant to this eval harness",
+  "fork_point_index": 1,
+  "parent_context": [
+    { "role": "user", "content": "How do you evaluate LLM outputs at scale?" },
+    { "role": "assistant", "content": "At scale you have three options: human evaluation (ground truth but expensive and slow), automated metrics (fast but often poorly correlated with quality), and LLM-as-judge (a model scores outputs against a rubric). LLM-as-judge has become the dominant approach for open-ended tasks because it scales cheaply and correlates better with human judgment than surface metrics like BLEU or ROUGE. The quality of your judge prompt and rubric matters enormously." }
+  ],
+  "branch_context": [
+    { "role": "user", "content": "How reliable is using an LLM as a judge for evaluating other LLM outputs?" },
+    { "role": "assistant", "content": "LLM-as-judge correlates reasonably well with human judgment on most tasks — studies show 80-90% agreement on pairwise preference tasks. But it has systematic biases: it favors longer responses, prefers outputs that sound confident, and tends to prefer outputs similar in style to its own training distribution. Using the same model family to judge as to generate is a known conflict of interest." },
+    { "role": "user", "content": "What are the known failure modes?" },
+    { "role": "assistant", "content": "The main failure modes are: position bias (the judge rates the first option higher in pairwise comparisons), verbosity bias (longer = better regardless of content), self-enhancement bias (a model rates outputs from the same model family higher), and sycophancy (the judge agrees with whatever framing the prompt implies). Absolute scoring (1-5) is more susceptible to calibration drift than relative pairwise scoring." },
+    { "role": "user", "content": "How do I calibrate a judge prompt to reduce bias?" },
+    { "role": "assistant", "content": "Several techniques help: use a detailed rubric with explicit criteria rather than asking for a holistic score, provide anchor examples at each score level so the scale is grounded, randomize the order of options in pairwise comparisons, run each comparison twice with order swapped and average, and spot-check judge outputs against human labels on a small held-out set to measure calibration. Chain of thought in the judge prompt also reduces sycophancy by forcing explicit reasoning before scoring." }
+  ],
+  "ideal_merge": "LLM-as-judge correlates ~80-90% with human judgment but has systematic biases: verbosity bias (longer = better), position bias in pairwise comparisons, and self-enhancement bias when judging same-family outputs. To reduce these: use explicit rubrics with anchor examples, randomize and swap option order, and add chain of thought to force reasoning before scoring.",
+  "key_conclusions": [
+    "LLM-as-judge achieves roughly 80-90% agreement with human judgment on pairwise tasks",
+    "key biases include verbosity bias, position bias, and self-enhancement bias",
+    "chain of thought in the judge prompt reduces sycophancy",
+    "swapping option order and averaging mitigates position bias"
+  ]
+}

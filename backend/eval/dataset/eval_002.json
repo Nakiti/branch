@@ -1,0 +1,21 @@
+{
+  "id": "eval_002",
+  "description": "Branch explores alternatives to transformers while parent discusses transformer weaknesses",
+  "fork_point_index": 1,
+  "parent_context": [
+    { "role": "user", "content": "What makes transformers so dominant in modern ML?" },
+    { "role": "assistant", "content": "Transformers dominate because they parallelize extremely well on GPUs, scale predictably with data and compute, and their attention mechanism can model long-range dependencies that CNNs and RNNs struggle with. Pretraining on massive datasets transfers well to downstream tasks, and the ecosystem of tooling, pretrained weights, and research has compounded their advantages over the past few years." }
+  ],
+  "branch_context": [
+    { "role": "user", "content": "What are the most promising alternatives to transformers?" },
+    { "role": "assistant", "content": "The most serious alternative right now is state space models (SSMs), particularly Mamba. SSMs process sequences recurrently but with a structured state transition that can be computed in parallel during training. They achieve transformer-level performance on many benchmarks while scaling linearly with sequence length rather than quadratically." },
+    { "role": "user", "content": "How does Mamba compare to transformers in practice?" },
+    { "role": "assistant", "content": "Mamba matches or exceeds transformer performance on language modeling benchmarks up to moderate scale, and significantly outperforms on very long sequences where attention's quadratic cost becomes prohibitive. The tradeoff is that Mamba's selective state space mechanism is harder to reason about and has less mature tooling. Hybrid architectures mixing attention layers with SSM layers are emerging as a practical middle ground." }
+  ],
+  "ideal_merge": "The most credible transformer alternative is Mamba (a state space model), which scales linearly with sequence length vs. transformers' quadratic attention cost — a major advantage for long contexts. Mamba matches transformer quality on standard benchmarks, though tooling is less mature. Hybrid attention + SSM architectures are emerging as a practical middle ground.",
+  "key_conclusions": [
+    "Mamba scales linearly with sequence length vs quadratic for transformers",
+    "Mamba matches transformer performance on standard language modeling benchmarks",
+    "hybrid attention and SSM architectures are an emerging middle ground"
+  ]
+}

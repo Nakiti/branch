@@ -11,7 +11,7 @@ interface FlowEdge {
   id: string
   source: string
   target: string
-  sourceHandle: string
+  sourceHandle: 'out'
   type: 'branch'
 }
 
@@ -99,7 +99,7 @@ export const useStore = create<StoreState>((set, get) => ({
             id: `edge-${node.thread.id}`,
             source: parentId,
             target: node.thread.id,
-            sourceHandle: `msg-${node.thread.fork_source_message_id}`,
+            sourceHandle: 'out',
             type: 'branch',
           })
         }
@@ -157,7 +157,7 @@ export const useStore = create<StoreState>((set, get) => ({
           id: `edge-${thread.id}`,
           source: parentThreadId,
           target: thread.id,
-          sourceHandle: `msg-${forkMessageId}`,
+          sourceHandle: 'out' as const,
           type: 'branch' as const,
         },
       ],

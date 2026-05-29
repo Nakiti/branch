@@ -44,7 +44,7 @@ function MessageRow({
         <div className="whitespace-pre-wrap">{message.content}</div>
 
         {isMerge && (
-          <div className="mt-2 pt-2 border-t border-merge-bubble-foreground/15 flex items-center justify-between gap-2 text-[11px]">
+          <div className="mt-2 pt-2 border-t border-merge-bubble-foreground/15 flex items-center gap-2 text-[11px]">
             <span className="inline-flex items-center gap-1 font-medium">
               <GitMerge className="h-3 w-3" />
               Merged from: {sourceLabel ?? 'branch'}
@@ -61,13 +61,6 @@ function MessageRow({
             Branch
           </button>
         )}
-
-        <Handle
-          type="source"
-          position={Position.Right}
-          id={`msg-${message.id}`}
-          style={{ right: -4, top: '50%' }}
-        />
       </div>
     </div>
   )
@@ -116,9 +109,11 @@ function ThreadNodeImpl({ id, data }: NodeProps<ThreadNodeData>) {
   const [isSending, setIsSending] = useState(false)
   const [isMerging, setIsMerging] = useState(false)
   const [mergePopover, setMergePopover] = useState(false)
+  // Height of the scrollable messages area — draggable via the resize grip
+  const [messagesHeight, setMessagesHeight] = useState(260)
   const bottomRef = useRef<HTMLDivElement>(null)
 
-  const { getNode, setCenter } = useReactFlow()
+  const { setCenter } = useReactFlow()
   const nodePositions = useStore(s => s.nodePositions)
   const threads = useStore(s => s.threads)
   const messages = useStore(s => s.messages[id] ?? [])
@@ -133,10 +128,25 @@ function ThreadNodeImpl({ id, data }: NodeProps<ThreadNodeData>) {
   const isStreaming = streamingThreadId === id
   const isRoot = data.thread.fork_source_message_id === null
 
-  // Scroll to bottom when messages or streaming content changes
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages.length, isStreaming, streamingContent])
+
+  // Drag the resize grip to adjust the messages pane height
+  const startResize = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+    const y0 = e.clientY
+    const h0 = messagesHeight
+    const onMove = (ev: MouseEvent) =>
+      setMessagesHeight(Math.max(80, h0 + ev.clientY - y0))
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
 
   const handleSend = async () => {
     const content = input.trim()
@@ -212,7 +222,7 @@ function ThreadNodeImpl({ id, data }: NodeProps<ThreadNodeData>) {
   return (
     <div
       className={cn(
-        'w-[360px] bg-card border border-border rounded-xl overflow-hidden',
+        'w-[360px] bg-card border border-border rounded-xl overflow-hidden flex flex-col',
         'shadow-card hover:shadow-card-hover transition-shadow'
       )}
     >
@@ -265,7 +275,11 @@ function ThreadNodeImpl({ id, data }: NodeProps<ThreadNodeData>) {
 
       {!collapsed && (
         <>
-          <div className="max-h-[400px] overflow-y-auto px-3.5 py-3 space-y-3 nodrag nowheel">
+          {/* Messages — height controlled by the resize grip below */}
+          <div
+            style={{ height: messagesHeight }}
+            className="overflow-y-auto px-3.5 py-3 space-y-3 nodrag nowheel"
+          >
             {messages.map(m => (
               <MessageRow
                 key={m.id}
@@ -279,7 +293,6 @@ function ThreadNodeImpl({ id, data }: NodeProps<ThreadNodeData>) {
               />
             ))}
 
-            {/* Streaming in-progress indicator */}
             {isStreaming && streamingContent && (
               <div className="flex justify-start">
                 <div className="max-w-[90%] px-3.5 py-2.5 text-[13px] leading-relaxed bg-assistant-bubble text-assistant-bubble-foreground rounded-2xl rounded-tl-md whitespace-pre-wrap opacity-80">
@@ -292,7 +305,16 @@ function ThreadNodeImpl({ id, data }: NodeProps<ThreadNodeData>) {
             <div ref={bottomRef} />
           </div>
 
-          <div className="border-t border-border p-2.5 flex items-center gap-2 bg-card nodrag">
+          {/* Resize grip — drag to expand / shrink the messages pane */}
+          <div
+            onMouseDown={startResize}
+            className="nodrag h-2.5 flex items-center justify-center cursor-ns-resize hover:bg-accent/50 border-y border-border transition-colors group"
+          >
+            <div className="w-8 h-px bg-border group-hover:bg-primary/40 transition-colors" />
+          </div>
+
+          {/* Input */}
+          <div className="p-2.5 flex items-center gap-2 bg-card nodrag">
             <input
               type="text"
               value={input}
@@ -313,7 +335,8 @@ function ThreadNodeImpl({ id, data }: NodeProps<ThreadNodeData>) {
         </>
       )}
 
-      <Handle type="target" position={Position.Left} id="in" style={{ left: -4 }} />
+      <Handle type="target" position={Position.Left} id="in" style={{ left: -5, top: '50%' }} />
+      <Handle type="source" position={Position.Right} id="out" style={{ right: -5, top: '50%' }} />
     </div>
   )
 }
