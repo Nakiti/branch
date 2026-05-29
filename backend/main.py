@@ -19,10 +19,12 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Branch API", lifespan=lifespan)
 
+# FRONTEND_URL can be a single URL or a comma-separated list for multiple deployments
 _origins = ["http://localhost:3000"]
-_frontend_url = os.getenv("FRONTEND_URL")
-if _frontend_url and _frontend_url not in _origins:
-    _origins.append(_frontend_url)
+for _url in os.getenv("FRONTEND_URL", "").split(","):
+    _url = _url.strip().rstrip("/")
+    if _url and _url not in _origins:
+        _origins.append(_url)
 
 app.add_middleware(
     CORSMiddleware,
