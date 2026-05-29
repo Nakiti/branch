@@ -1,0 +1,27 @@
+{
+  "id": "eval_007",
+  "description": "Short parent (1 exchange), very long branch — tests that long branches are summarized well without losing key details",
+  "fork_point_index": 0,
+  "parent_context": [
+    { "role": "user", "content": "What is RLHF?" },
+    { "role": "assistant", "content": "RLHF (Reinforcement Learning from Human Feedback) is a technique for aligning LLMs with human preferences. The model is first fine-tuned on demonstrations, then a reward model is trained on human preference comparisons, and finally the LLM is optimized against that reward model using reinforcement learning (typically PPO). It's how models like ChatGPT were trained to be helpful and follow instructions." }
+  ],
+  "branch_context": [
+    { "role": "user", "content": "Walk me through the full RLHF pipeline step by step" },
+    { "role": "assistant", "content": "Step 1 is supervised fine-tuning (SFT): you collect human-written demonstrations of good behavior and fine-tune the base model on them. This gives you a model that can follow instructions but isn't yet optimized for preference." },
+    { "role": "user", "content": "How is the reward model trained?" },
+    { "role": "assistant", "content": "The reward model is trained on comparison data: human annotators see two model outputs for the same prompt and pick which is better. The reward model learns to predict these preferences — it takes a prompt and a completion and outputs a scalar reward score. Getting high-quality consistent comparisons is the hardest part of the whole pipeline." },
+    { "role": "user", "content": "What are the risks of reward hacking?" },
+    { "role": "assistant", "content": "Reward hacking happens when the model finds ways to get high reward scores that don't correspond to genuinely good behavior — for example, generating very long confident-sounding responses because annotators tend to prefer them, even when shorter answers would be better. The reward model is an imperfect proxy for human values, and RL optimization is very good at exploiting proxies. KL divergence penalties against the SFT model are used to limit how far the policy can drift." },
+    { "role": "user", "content": "How does PPO work in this context?" },
+    { "role": "assistant", "content": "PPO (Proximal Policy Optimization) updates the policy (the LLM) to maximize expected reward while staying close to the previous policy via a clipped objective. In RLHF, the LLM generates a completion, the reward model scores it, and PPO updates the weights. The KL penalty against the SFT reference model is added to the reward to prevent the model from collapsing into reward-hacking behavior." },
+    { "role": "user", "content": "What does Constitutional AI do differently?" },
+    { "role": "assistant", "content": "Constitutional AI (Anthropic's approach) replaces human preference comparisons with AI-generated feedback based on a written constitution of principles. The model critiques and revises its own outputs according to the constitution (RLAIF — RL from AI feedback), then a preference model is trained on those AI comparisons. This dramatically reduces the need for human annotation and makes the value alignment more explicit and auditable." }
+  ],
+  "ideal_merge": "The full RLHF pipeline: (1) SFT on human demonstrations, (2) train a reward model on pairwise human preference comparisons, (3) optimize the LLM against the reward model with PPO + a KL penalty to prevent reward hacking. The main risk is reward hacking — the model exploiting the proxy reward — which KL divergence against the SFT baseline partially mitigates. Constitutional AI (RLAIF) replaces human comparisons with AI feedback from a written principles document, reducing annotation cost and making alignment more auditable.",
+  "key_conclusions": [
+    "RLHF has three stages: SFT, reward model training on human comparisons, PPO optimization",
+    "reward hacking is the main risk — KL divergence penalty against the SFT model partially mitigates it",
+    "Constitutional AI replaces human preference comparisons with AI feedback from a written constitution"
+  ]
+}

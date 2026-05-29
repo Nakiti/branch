@@ -1,0 +1,1 @@
+"use strict";exports.id=185,exports.ids=[185],exports.modules={3185:(e,t,s)=>{s.r(t),s.d(t,{default:()=>r});let r=(0,s(8570).createProxy)(String.raw`/Users/n2akiti/Documents/cse190/04-student-choice-nikhil-04/frontend/components/branch-app.tsx#default`)}};

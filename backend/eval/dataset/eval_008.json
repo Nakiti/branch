@@ -1,0 +1,28 @@
+{
+  "id": "eval_008",
+  "description": "Hardest case: parent continued after fork assuming scaling still works, branch found evidence that scaling is hitting diminishing returns — direct conflict",
+  "fork_point_index": 1,
+  "parent_context": [
+    { "role": "user", "content": "Is scaling laws still the main driver of LLM progress?" },
+    { "role": "assistant", "content": "Scaling laws — the empirical observation that model performance improves predictably with more parameters, data, and compute — have been the dominant framework since the Chinchilla paper. Most frontier labs still treat scaling as the primary lever. That said, there's active debate about whether we're approaching the limits of the current paradigm, particularly around pretraining data availability." }
+  ],
+  "branch_context": [
+    { "role": "user", "content": "Are there signs that scaling is hitting diminishing returns?" },
+    { "role": "assistant", "content": "There are real signals. Several frontier labs have reported that their most recent large training runs showed smaller capability jumps than previous generations at similar compute multiples. OpenAI's GPT-4 to o-series transition was notable for investing in inference-time compute (chain of thought, extended thinking) rather than just larger pretraining runs." },
+    { "role": "user", "content": "What evidence is there that we are approaching the limits of pretraining data?" },
+    { "role": "assistant", "content": "The high-quality internet text corpus is finite and largely exhausted by frontier models — estimates suggest current models have trained on most of the available English text. Synthetic data generation is being used to extend training, but models trained on synthetic data can inherit the generating model's blind spots. The Chinchilla compute-optimal frontier may be shifting as data rather than compute becomes the binding constraint." },
+    { "role": "user", "content": "What approaches are people exploring beyond just scaling?" },
+    { "role": "assistant", "content": "The main bets are: inference-time compute (letting models think longer rather than be bigger), better data curation and synthetic data pipelines, architectural improvements like mixture of experts and SSMs, and multi-modal training that uses non-text data. There's also significant interest in reasoning and planning capabilities that don't come purely from scale." }
+  ],
+  "parent_continuation": [
+    { "role": "user", "content": "So what compute budget would be needed to train a model 10x bigger than GPT-4?" },
+    { "role": "assistant", "content": "Assuming GPT-4 was trained with roughly 10^25 FLOPS, a 10x larger model trained compute-optimally per Chinchilla would require somewhere in the range of 10^26 FLOPS. At current GPU prices and power costs that's hundreds of millions of dollars in compute alone, before accounting for data, infrastructure, and iteration costs. Only a handful of organizations globally can finance that." }
+  ],
+  "ideal_merge": "Important context for this discussion: the branch found evidence that scaling may already be hitting diminishing returns. Recent frontier training runs have shown smaller capability jumps per compute multiple, most high-quality English pretraining data is likely exhausted, and the field is pivoting toward inference-time compute, better data pipelines, and architectural improvements rather than just larger runs. The assumption that a 10x bigger model is straightforwardly achievable and beneficial may be worth revisiting.",
+  "key_conclusions": [
+    "recent frontier training runs show smaller capability gains per compute multiple than previous generations",
+    "high-quality English pretraining data is largely exhausted — data is becoming the binding constraint",
+    "the field is pivoting to inference-time compute and architectural improvements over pure scaling",
+    "the branch directly challenges the parent thread's assumption that scaling larger is the primary path forward"
+  ]
+}

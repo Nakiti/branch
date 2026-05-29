@@ -1,0 +1,23 @@
+{
+  "id": "eval_003",
+  "description": "Branch resolves LoRA vs full fine-tuning tradeoff, parent asking about fine-tuning basics",
+  "fork_point_index": 1,
+  "parent_context": [
+    { "role": "user", "content": "I want to fine-tune an LLM for a specific task. Where do I start?" },
+    { "role": "assistant", "content": "Start by deciding whether you actually need fine-tuning — prompt engineering and RAG solve most problems without touching model weights. If you do need fine-tuning, collect 500-5000 high quality examples in the format you want the model to produce, pick a base model appropriate for your compute budget, and decide between full fine-tuning and parameter-efficient methods like LoRA. The data quality matters far more than quantity." }
+  ],
+  "branch_context": [
+    { "role": "user", "content": "Should I use LoRA or full fine-tuning?" },
+    { "role": "assistant", "content": "LoRA (Low-Rank Adaptation) freezes the original model weights and injects small trainable rank decomposition matrices into the attention layers. It typically uses 0.1-1% of the parameters of full fine-tuning, which means it fits on much smaller hardware and trains faster. Quality is usually within a few percent of full fine-tuning for most tasks." },
+    { "role": "user", "content": "What are the memory implications?" },
+    { "role": "assistant", "content": "Full fine-tuning of a 7B model requires roughly 60-80GB of VRAM in mixed precision — you need at least 2-4 A100s. LoRA on the same model fits comfortably on a single A100 or even a high-end consumer GPU like a 4090. QLoRA pushes this further by quantizing the frozen base model to 4-bit, letting you fine-tune a 7B model on a single 24GB GPU." },
+    { "role": "user", "content": "When would full fine-tuning actually be worth it?" },
+    { "role": "assistant", "content": "Full fine-tuning makes sense when you need to substantially change the model's behavior or knowledge rather than just its style, when you have tens of thousands of examples and the marginal quality improvement justifies the cost, or when you're distilling a larger model into a smaller one. For most production use cases with limited data and budget, LoRA or QLoRA is the right default." }
+  ],
+  "ideal_merge": "LoRA is almost always the right default: it uses ~1% of full fine-tuning parameters, fits on a single GPU (QLoRA brings a 7B model down to a 24GB consumer GPU), and matches full fine-tuning quality within a few percent. Full fine-tuning is only worth the cost when you need to substantially change the model's knowledge or are distilling a larger model.",
+  "key_conclusions": [
+    "LoRA uses roughly 1% of the parameters of full fine-tuning",
+    "QLoRA can fine-tune a 7B model on a single 24GB consumer GPU",
+    "full fine-tuning is only worth it for substantial knowledge changes or distillation"
+  ]
+}

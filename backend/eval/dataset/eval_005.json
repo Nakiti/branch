@@ -1,0 +1,24 @@
+{
+  "id": "eval_005",
+  "description": "Branch dives into chunking strategies as a subtopic of RAG system design",
+  "fork_point_index": 1,
+  "parent_context": [
+    { "role": "user", "content": "How do I design a RAG system from scratch?" },
+    { "role": "assistant", "content": "A RAG system has three main stages: ingestion (splitting documents into chunks and embedding them into a vector store), retrieval (embedding the user query and finding the most similar chunks), and generation (passing the retrieved chunks as context to the LLM). The quality of chunking and retrieval usually matters more than the choice of LLM. Start with a simple fixed-size chunking strategy and a hosted vector DB like Pinecone or Supabase pgvector, then iterate." }
+  ],
+  "branch_context": [
+    { "role": "user", "content": "Let's focus just on chunking strategies for the documents" },
+    { "role": "assistant", "content": "The simplest strategy is fixed-size chunking — split every N tokens with some overlap (typically 10-20%) between chunks. It's fast and predictable but ignores document structure. Recursive character splitting is slightly smarter — it tries to split on paragraph breaks, then sentences, then words, preserving natural boundaries where possible." },
+    { "role": "user", "content": "What is the impact of chunk size on retrieval quality?" },
+    { "role": "assistant", "content": "Smaller chunks (128-256 tokens) retrieve more precisely but may lack context — the retrieved chunk might not contain enough surrounding information for the LLM to answer well. Larger chunks (512-1024 tokens) provide more context but the embedding represents a broader topic, reducing retrieval precision. A common pattern is to embed small chunks for retrieval but return larger surrounding windows to the LLM." },
+    { "role": "user", "content": "What is semantic chunking and when should I use it?" },
+    { "role": "assistant", "content": "Semantic chunking groups sentences by embedding similarity rather than fixed token counts — sentences are merged into a chunk until the semantic similarity drops below a threshold. It produces chunks that are more topically coherent, which improves retrieval quality for documents with clear topic shifts like research papers or long articles. The tradeoff is higher ingestion cost and more complexity. Use it when fixed-size chunking is producing poor retrieval and your documents have clear topic structure." }
+  ],
+  "ideal_merge": "Chunk size involves a tradeoff: small chunks (128-256 tokens) retrieve precisely but lack context; large chunks (512-1024) provide context but reduce retrieval precision. A practical pattern is embedding small chunks but returning larger windows to the LLM. Semantic chunking (grouping by embedding similarity) produces more topically coherent chunks and improves retrieval on structured documents like papers, at higher ingestion cost.",
+  "key_conclusions": [
+    "small chunks retrieve precisely but may lack sufficient context for the LLM",
+    "a common pattern is to embed small chunks but return larger surrounding windows to the LLM",
+    "semantic chunking groups sentences by embedding similarity for more topically coherent chunks",
+    "semantic chunking is worth the cost when documents have clear topic structure"
+  ]
+}

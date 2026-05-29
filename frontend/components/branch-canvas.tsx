@@ -5,7 +5,6 @@ import ReactFlow, {
   Background,
   BackgroundVariant,
   Controls,
-  MiniMap,
   ReactFlowProvider,
   useNodesState,
   useEdgesState,
@@ -54,9 +53,10 @@ function CanvasInner() {
           position: nodePositions[t.id] ?? { x: 100, y: 300 },
           data: { thread: t },
           dragHandle: '.drag-handle',
+          width: 360,
         }))
       )
-      setTimeout(() => fitView({ padding: 0.2, duration: 400 }), 80)
+      setTimeout(() => fitView({ padding: 0.15, duration: 400, minZoom: 0.75 }), 80)
     } else {
       // Only add nodes that weren't present before (from fork)
       const newThreads = threadValues.filter(t => !prevThreadIds.current.has(t.id))
@@ -70,6 +70,7 @@ function CanvasInner() {
             position: nodePositions[t.id] ?? { x: 100, y: 300 },
             data: { thread: t },
             dragHandle: '.drag-handle',
+            width: 360,
           })),
         ])
       }
@@ -108,8 +109,8 @@ function CanvasInner() {
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         fitView
-        fitViewOptions={{ padding: 0.2 }}
-        minZoom={0.25}
+        fitViewOptions={{ padding: 0.15, minZoom: 0.75 }}
+        minZoom={0.4}
         maxZoom={1.75}
         proOptions={{ hideAttribution: true }}
         nodesDraggable
@@ -123,14 +124,6 @@ function CanvasInner() {
           color="var(--canvas-dot)"
         />
         <Controls position="bottom-right" showInteractive={false} />
-        <MiniMap
-          position="bottom-right"
-          style={{ right: 60, bottom: 10 }}
-          pannable
-          zoomable
-          nodeColor={() => 'oklch(0.86 0.06 280)'}
-          maskColor="oklch(0.95 0.005 270 / 0.6)"
-        />
       </ReactFlow>
     </div>
   )

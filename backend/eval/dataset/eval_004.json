@@ -1,0 +1,21 @@
+{
+  "id": "eval_004",
+  "description": "Branch adds chain of thought as a specific prompting technique, parent on prompt engineering basics",
+  "fork_point_index": 1,
+  "parent_context": [
+    { "role": "user", "content": "What are the basics of prompt engineering?" },
+    { "role": "assistant", "content": "Good prompts are specific about the task, format, and constraints. You should tell the model what role to play, what the output should look like, and what to avoid. Providing 2-3 examples (few-shot prompting) dramatically improves consistency. Iterating on prompts systematically — changing one thing at a time and evaluating the output — is more effective than guessing." }
+  ],
+  "branch_context": [
+    { "role": "user", "content": "Tell me specifically about chain of thought prompting" },
+    { "role": "assistant", "content": "Chain of thought (CoT) prompting asks the model to reason step by step before giving an answer, either by adding 'think step by step' to the prompt or by providing few-shot examples that show reasoning traces. It significantly improves performance on multi-step reasoning tasks like math, logic, and code because it forces the model to decompose the problem rather than pattern-match to an answer." },
+    { "role": "user", "content": "Does chain of thought help with all task types or just some?" },
+    { "role": "assistant", "content": "CoT helps most on tasks that genuinely require multi-step reasoning — math problems, logical deduction, planning, code debugging. It provides little benefit or can even hurt on simple factual recall or classification tasks where there is no reasoning chain to follow. A good rule of thumb: if a human would need to show their work to solve it reliably, CoT will probably help the model too." }
+  ],
+  "ideal_merge": "Chain of thought prompting (adding 'think step by step' or showing reasoning examples) significantly improves multi-step tasks like math, logic, and debugging by forcing decomposition rather than pattern-matching. It doesn't help — and can hurt — on simple factual or classification tasks. A useful heuristic: if a human would need to show their work, CoT will help.",
+  "key_conclusions": [
+    "chain of thought helps on multi-step reasoning tasks like math, logic, and code",
+    "chain of thought provides little benefit or hurts on simple factual recall or classification",
+    "if a human would need to show their work, chain of thought will likely help"
+  ]
+}
