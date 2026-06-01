@@ -67,17 +67,14 @@ A logged in user can have a conversation with the LLM, fork any message into a n
 
 ### After First Deliverable Goals
 
-- Visual tree view
-> **(a) Implemented — delivered ahead of schedule as part of the core.** The React Flow infinite canvas renders the full branch tree with one node per thread and bezier edges connecting each branch to its parent thread. Thread position on the canvas is persisted in the Zustand store and nodes are draggable. This ended up being central to the UX rather than a stretch goal.
+- Improve Visual tree view
+> **(a) Partially Implemented** The React Flow infinite canvas renders the full branch tree with one node per thread and bezier edges connecting each branch to its parent thread. Thread position on the canvas is persisted in the Zustand store and nodes are draggable. This ended up being central to the UX rather than a stretch goal.
 
 - Auto suggested branch naming by Claude
-> **(c) No longer planned.** Branches currently use null labels (displayed generically in the sidebar). Auto-naming was deprioritized in favor of getting core fork/merge functionality solid.
 
 - Conflict detection - where the conversation of one branch contradicts the conversation of another branch
-> **(c) No longer planned.** This would require comparing branch contexts pair-wise and adding latency per message. The multi-branch merge synthesizer (`services/merge.py` `synthesize_multi_merge`) surfaces divergence implicitly when merging, but explicit conflict detection is out of scope.
 
 - Eval harness
 > **(a) Implemented as written.** `backend/eval/` contains a dataset of hand-labeled examples (`dataset/`), an LLM-as-judge scorer (`judge.py`) that rates each synthesis on Coverage, Precision, and Coherence (1–5 each), and a harness entry point (`run_eval.py`).
 
 - Branch suggestion - Claude detects when a chat within a conversation is a tangent and prompts the user to branch
-> **(c) No longer planned.** Detecting conversational tangents would require a model call on every message, adding latency and cost. Deprioritized in favor of user-initiated branching.
