@@ -2,7 +2,8 @@
 
 import { memo, useState, useRef, useEffect } from 'react'
 import { Handle, Position, type NodeProps, useReactFlow } from 'reactflow'
-import { GitBranch, GitMerge, Minus, Maximize2, Send } from 'lucide-react'
+import { GitBranch, GitMerge, Minus, Maximize2, Send, Trash2 } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
 import { cn } from '@/lib/utils'
 import { useStore } from '@/store/useStore'
 import { sendMessage, forkThread, mergeBack, getMessages } from '@/lib/api'
@@ -41,7 +42,28 @@ function MessageRow({
             'bg-merge-bubble text-merge-bubble-foreground rounded-2xl rounded-tl-md border border-merge-bubble-foreground/15'
         )}
       >
-        <div className="whitespace-pre-wrap">{message.content}</div>
+        {isUser ? (
+          <div className="whitespace-pre-wrap">{message.content}</div>
+        ) : (
+          <div className="prose prose-sm max-w-none prose-p:my-1 prose-pre:my-1 prose-ul:my-1 prose-ol:my-1 prose-headings:my-1 prose-code:before:content-none prose-code:after:content-none">
+            <ReactMarkdown
+              components={{
+                code({ className, children, ...props }) {
+                  const isBlock = className?.startsWith('language-')
+                  return isBlock ? (
+                    <pre className="bg-black/10 rounded-md px-3 py-2 overflow-x-auto text-[12px]">
+                      <code className={className} {...props}>{children}</code>
+                    </pre>
+                  ) : (
+                    <code className="bg-black/10 rounded px-1 text-[12px]" {...props}>{children}</code>
+                  )
+                },
+              }}
+            >
+              {message.content}
+            </ReactMarkdown>
+          </div>
+        )}
 
         {isMerge && (
           <div className="mt-2 pt-2 border-t border-merge-bubble-foreground/15 flex items-center gap-2 text-[11px]">
@@ -103,14 +125,50 @@ function MergePopover({
   )
 }
 
+function DeletePopover({
+  label,
+  onConfirm,
+  onClose,
+  isDeleting,
+}: {
+  label: string
+  onConfirm: () => void
+  onClose: () => void
+  isDeleting: boolean
+}) {
+  return (
+    <div className="absolute top-full right-0 mt-2 w-56 bg-popover border border-border rounded-lg shadow-card-hover p-3 z-50">
+      <div className="text-[13px] font-medium text-foreground mb-1">{label}</div>
+      <div className="text-[11px] text-muted-foreground mb-3">This cannot be undone.</div>
+      <div className="flex justify-end gap-2">
+        <button
+          onClick={onClose}
+          disabled={isDeleting}
+          className="px-2.5 py-1 text-[11px] rounded-md hover:bg-accent text-muted-foreground disabled:opacity-50"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={onConfirm}
+          disabled={isDeleting}
+          className="px-2.5 py-1 text-[11px] rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90 font-medium disabled:opacity-50"
+        >
+          {isDeleting ? 'Deleting…' : 'Delete'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function ThreadNodeImpl({ id, data }: NodeProps<ThreadNodeData>) {
   const [collapsed, setCollapsed] = useState(false)
   const [input, setInput] = useState('')
   const [isSending, setIsSending] = useState(false)
   const [isMerging, setIsMerging] = useState(false)
   const [mergePopover, setMergePopover] = useState(false)
-  // Height of the scrollable messages area — draggable via the resize grip
-  const [messagesHeight, setMessagesHeight] = useState(260)
+  const [deletePopover, setDeletePopover] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [size, setSize] = useState({ width: 600, height: 500 })
   const bottomRef = useRef<HTMLDivElement>(null)
 
   const { setCenter } = useReactFlow()
@@ -124,22 +182,29 @@ function ThreadNodeImpl({ id, data }: NodeProps<ThreadNodeData>) {
   const finalizeStream = useStore(s => s.finalizeStream)
   const addThread = useStore(s => s.addThread)
   const addMergeArtifact = useStore(s => s.addMergeArtifact)
+  const deleteThread = useStore(s => s.deleteThread)
+  const updateThreadLabel = useStore(s => s.updateThreadLabel)
 
+  const liveThread = useStore(s => s.threads[id])
   const isStreaming = streamingThreadId === id
   const isRoot = data.thread.fork_source_message_id === null
+  const label = liveThread?.label ?? data.thread.label
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages.length, isStreaming, streamingContent])
 
-  // Drag the resize grip to adjust the messages pane height
   const startResize = (e: React.MouseEvent) => {
     e.stopPropagation()
     e.preventDefault()
+    const x0 = e.clientX
     const y0 = e.clientY
-    const h0 = messagesHeight
-    const onMove = (ev: MouseEvent) =>
-      setMessagesHeight(Math.max(80, h0 + ev.clientY - y0))
+    const w0 = size.width
+    const h0 = size.height
+    const onMove = (ev: MouseEvent) => setSize({
+      width: Math.max(280, w0 + ev.clientX - x0),
+      height: Math.max(80, h0 + ev.clientY - y0),
+    })
     const onUp = () => {
       window.removeEventListener('mousemove', onMove)
       window.removeEventListener('mouseup', onUp)
@@ -165,7 +230,7 @@ function ThreadNodeImpl({ id, data }: NodeProps<ThreadNodeData>) {
     })
 
     try {
-      for await (const chunk of sendMessage(id, content)) {
+      for await (const chunk of sendMessage(id, content, label => updateThreadLabel(id, label))) {
         appendStreamChunk(id, chunk)
       }
       const persisted = await getMessages(id)
@@ -179,7 +244,7 @@ function ThreadNodeImpl({ id, data }: NodeProps<ThreadNodeData>) {
 
   const handleBranch = async (msgId: string) => {
     try {
-      const { thread_id } = await forkThread(msgId)
+      const { thread_id, label } = await forkThread(msgId)
       const { data: { session } } = await supabase.auth.getSession()
       const parentPos = nodePositions[id] ?? { x: 0, y: 0 }
 
@@ -187,7 +252,7 @@ function ThreadNodeImpl({ id, data }: NodeProps<ThreadNodeData>) {
         {
           id: thread_id,
           owner_id: session?.user.id ?? '',
-          label: null,
+          label: label ?? null,
           fork_source_message_id: msgId,
           created_at: new Date().toISOString(),
         },
@@ -196,7 +261,7 @@ function ThreadNodeImpl({ id, data }: NodeProps<ThreadNodeData>) {
         parentPos
       )
 
-      const newPos = { x: parentPos.x + 480, y: parentPos.y + 160 }
+      const newPos = { x: parentPos.x + 600, y: parentPos.y + 160 }
       setTimeout(
         () => setCenter(newPos.x + 180, newPos.y + 160, { zoom: 1, duration: 600 }),
         50
@@ -219,10 +284,22 @@ function ThreadNodeImpl({ id, data }: NodeProps<ThreadNodeData>) {
     }
   }
 
+  const handleDelete = async () => {
+    setIsDeleting(true)
+    try {
+      await deleteThread(id)
+    } catch (e) {
+      console.error('Delete failed:', e)
+      setIsDeleting(false)
+      setDeletePopover(false)
+    }
+  }
+
   return (
     <div
+      style={{ width: size.width }}
       className={cn(
-        'w-[360px] bg-card border border-border rounded-xl overflow-hidden flex flex-col',
+        'relative bg-card border border-border rounded-xl overflow-hidden flex flex-col',
         'shadow-card hover:shadow-card-hover transition-shadow'
       )}
     >
@@ -236,7 +313,7 @@ function ThreadNodeImpl({ id, data }: NodeProps<ThreadNodeData>) {
             )}
           />
           <span className="text-[13px] font-semibold truncate">
-            {data.thread.label ?? (isRoot ? 'Main' : 'Branch')}
+            {label ?? (isRoot ? 'Main' : 'Branch')}
           </span>
           {!isRoot && (
             <span className="text-[10px] uppercase tracking-wider text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
@@ -264,6 +341,21 @@ function ThreadNodeImpl({ id, data }: NodeProps<ThreadNodeData>) {
             </>
           )}
           <button
+            onClick={() => { setDeletePopover(v => !v); setMergePopover(false) }}
+            className="p-1 rounded-md hover:bg-destructive/10 hover:text-destructive text-muted-foreground nodrag"
+            title={isRoot ? 'Delete conversation' : 'Delete branch'}
+          >
+            <Trash2 className="h-3 w-3" />
+          </button>
+          {deletePopover && (
+            <DeletePopover
+              label={isRoot ? 'Delete this conversation?' : 'Delete this branch?'}
+              onConfirm={handleDelete}
+              onClose={() => setDeletePopover(false)}
+              isDeleting={isDeleting}
+            />
+          )}
+          <button
             onClick={() => setCollapsed(v => !v)}
             className="p-1 rounded-md hover:bg-accent text-muted-foreground nodrag"
             title={collapsed ? 'Expand' : 'Collapse'}
@@ -275,11 +367,22 @@ function ThreadNodeImpl({ id, data }: NodeProps<ThreadNodeData>) {
 
       {!collapsed && (
         <>
-          {/* Messages — height controlled by the resize grip below */}
           <div
-            style={{ height: messagesHeight }}
+            style={{ height: size.height }}
             className="overflow-y-auto px-3.5 py-3 space-y-3 nodrag nowheel"
           >
+            {messages.length === 0 && !isStreaming && (
+              <div className="flex flex-col items-center justify-center h-full gap-2 text-center py-8 select-none pointer-events-none">
+                <div className="text-2xl opacity-30">⎇</div>
+                <p className="text-[13px] font-medium text-muted-foreground">
+                  {isRoot ? 'Start a new conversation' : 'Continue this branch'}
+                </p>
+                <p className="text-[11px] text-muted-foreground/60">
+                  Type a message below to get started
+                </p>
+              </div>
+            )}
+
             {messages.map(m => (
               <MessageRow
                 key={m.id}
@@ -293,24 +396,43 @@ function ThreadNodeImpl({ id, data }: NodeProps<ThreadNodeData>) {
               />
             ))}
 
+            {(isSending && !isStreaming) || (isStreaming && !streamingContent) ? (
+              <div className="flex justify-start">
+                <div className="px-3.5 py-3 bg-assistant-bubble text-assistant-bubble-foreground rounded-2xl rounded-tl-md flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-current opacity-50 animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-current opacity-50 animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-current opacity-50 animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+              </div>
+            ) : null}
+
             {isStreaming && streamingContent && (
               <div className="flex justify-start">
-                <div className="max-w-[90%] px-3.5 py-2.5 text-[13px] leading-relaxed bg-assistant-bubble text-assistant-bubble-foreground rounded-2xl rounded-tl-md whitespace-pre-wrap opacity-80">
-                  {streamingContent}
+                <div className="max-w-[90%] px-3.5 py-2.5 text-[13px] leading-relaxed bg-assistant-bubble text-assistant-bubble-foreground rounded-2xl rounded-tl-md opacity-80">
+                  <div className="prose prose-sm max-w-none prose-p:my-1 prose-pre:my-1 prose-ul:my-1 prose-ol:my-1 prose-headings:my-1 prose-code:before:content-none prose-code:after:content-none">
+                    <ReactMarkdown
+                      components={{
+                        code({ className, children, ...props }) {
+                          const isBlock = className?.startsWith('language-')
+                          return isBlock ? (
+                            <pre className="bg-black/10 rounded-md px-3 py-2 overflow-x-auto text-[12px]">
+                              <code className={className} {...props}>{children}</code>
+                            </pre>
+                          ) : (
+                            <code className="bg-black/10 rounded px-1 text-[12px]" {...props}>{children}</code>
+                          )
+                        },
+                      }}
+                    >
+                      {streamingContent}
+                    </ReactMarkdown>
+                  </div>
                   <span className="inline-block w-1.5 h-3.5 ml-0.5 bg-current opacity-60 animate-pulse align-text-bottom" />
                 </div>
               </div>
             )}
 
             <div ref={bottomRef} />
-          </div>
-
-          {/* Resize grip — drag to expand / shrink the messages pane */}
-          <div
-            onMouseDown={startResize}
-            className="nodrag h-2.5 flex items-center justify-center cursor-ns-resize hover:bg-accent/50 border-y border-border transition-colors group"
-          >
-            <div className="w-8 h-px bg-border group-hover:bg-primary/40 transition-colors" />
           </div>
 
           {/* Input */}
@@ -334,6 +456,18 @@ function ThreadNodeImpl({ id, data }: NodeProps<ThreadNodeData>) {
           </div>
         </>
       )}
+
+      {/* Diagonal resize handle */}
+      <div
+        onMouseDown={startResize}
+        className="nodrag absolute bottom-0 right-0 w-5 h-5 flex items-end justify-end p-1 cursor-nwse-resize opacity-25 hover:opacity-60 transition-opacity"
+      >
+        <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor" className="text-foreground">
+          <circle cx="6.5" cy="6.5" r="1.1" />
+          <circle cx="3.5" cy="6.5" r="1.1" />
+          <circle cx="6.5" cy="3.5" r="1.1" />
+        </svg>
+      </div>
 
       <Handle type="target" position={Position.Left} id="in" style={{ left: -5, top: '50%' }} />
       <Handle type="source" position={Position.Right} id="out" style={{ right: -5, top: '50%' }} />

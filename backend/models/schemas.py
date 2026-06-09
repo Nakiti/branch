@@ -32,6 +32,7 @@ class ForkRequest(BaseModel):
 
 class ForkResponse(BaseModel):
     thread_id: str
+    label: Optional[str] = None
 
 
 class MergeRequest(BaseModel):

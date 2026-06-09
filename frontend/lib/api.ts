@@ -9,10 +9,13 @@ async function getAuthHeader(): Promise<Record<string, string>> {
   return { Authorization: `Bearer ${session.access_token}` }
 }
 
-/** Stream a chat response — yields text chunks as they arrive from the SSE endpoint. */
+/** Stream a chat response — yields text chunks as they arrive from the SSE endpoint.
+ *  If the backend sends a [LABEL:...] event (first message of a root thread),
+ *  onLabel is called with the generated label instead of yielding it as text. */
 export async function* sendMessage(
   thread_id: string,
-  content: string
+  content: string,
+  onLabel?: (label: string) => void
 ): AsyncGenerator<string> {
   const headers = await getAuthHeader()
   const response = await fetch(`${BACKEND_URL}/api/chat`, {
@@ -28,14 +31,19 @@ export async function* sendMessage(
     const { done, value } = await reader.read()
     if (done) break
     for (const line of decoder.decode(value).split('\n')) {
-      if (line.startsWith('data: ') && line !== 'data: [DONE]') {
-        yield line.slice(6)
+      if (!line.startsWith('data: ')) continue
+      const data = line.slice(6)
+      if (data === '[DONE]') continue
+      if (data.startsWith('[LABEL:') && data.endsWith(']')) {
+        onLabel?.(data.slice(7, -1))
+        continue
       }
+      yield data
     }
   }
 }
 
-export async function forkThread(message_id: string): Promise<{ thread_id: string }> {
+export async function forkThread(message_id: string): Promise<{ thread_id: string; label: string | null }> {
   const headers = await getAuthHeader()
   const res = await fetch(`${BACKEND_URL}/api/fork`, {
     method: 'POST',
@@ -90,5 +98,15 @@ export async function getMessages(thread_id: string): Promise<Message[]> {
   const headers = await getAuthHeader()
   const res = await fetch(`${BACKEND_URL}/api/threads/${thread_id}/messages`, { headers })
   if (!res.ok) throw new Error(`Fetch messages failed: ${res.statusText}`)
+  return res.json()
+}
+
+export async function deleteThread(thread_id: string): Promise<{ deleted: string[] }> {
+  const headers = await getAuthHeader()
+  const res = await fetch(`${BACKEND_URL}/api/threads/${thread_id}`, {
+    method: 'DELETE',
+    headers,
+  })
+  if (!res.ok) throw new Error(`Delete thread failed: ${res.statusText}`)
   return res.json()
 }

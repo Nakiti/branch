@@ -1,6 +1,7 @@
 'use client'
 
-import { Plus, MessageSquare, LogOut } from 'lucide-react'
+import { useState } from 'react'
+import { Plus, MessageSquare, LogOut, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useStore } from '@/store/useStore'
 import { supabase } from '@/lib/supabase'
@@ -12,6 +13,10 @@ export function ConversationSidebar() {
   const activeId = useStore(s => s.activeConversationId)
   const setActive = useStore(s => s.setActiveConversation)
   const createConversation = useStore(s => s.createConversation)
+  const deleteThread = useStore(s => s.deleteThread)
+
+  const [confirmingId, setConfirmingId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const handleNew = async () => {
     try {
@@ -24,6 +29,18 @@ export function ConversationSidebar() {
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     router.push('/auth')
+  }
+
+  const handleDeleteConfirm = async (id: string) => {
+    setDeletingId(id)
+    try {
+      await deleteThread(id)
+    } catch (e) {
+      console.error('Failed to delete conversation:', e)
+    } finally {
+      setDeletingId(null)
+      setConfirmingId(null)
+    }
   }
 
   return (
@@ -50,26 +67,53 @@ export function ConversationSidebar() {
 
       <div className="flex-1 overflow-y-auto px-2 pb-4 space-y-0.5">
         {conversations.map(c => (
-          <button
+          <div
             key={c.id}
-            onClick={() => setActive(c.id)}
             className={cn(
-              'w-full text-left px-3 py-2 rounded-lg flex items-start gap-2.5 transition-colors group',
-              activeId === c.id
-                ? 'bg-accent text-accent-foreground'
-                : 'hover:bg-accent/60 text-sidebar-foreground'
+              'w-full rounded-lg transition-colors group',
+              activeId === c.id ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/60 text-sidebar-foreground'
             )}
           >
-            <MessageSquare className="h-4 w-4 mt-0.5 shrink-0 opacity-70" />
-            <div className="min-w-0 flex-1">
-              <div className="text-sm font-medium truncate">
-                {c.label ?? 'Untitled'}
+            {confirmingId === c.id ? (
+              <div className="flex items-center gap-1.5 px-3 py-2">
+                <span className="text-[12px] text-muted-foreground flex-1">Delete this chat?</span>
+                <button
+                  onClick={() => handleDeleteConfirm(c.id)}
+                  disabled={deletingId === c.id}
+                  className="px-2 py-0.5 text-[11px] rounded bg-destructive text-destructive-foreground hover:bg-destructive/90 font-medium disabled:opacity-50"
+                >
+                  {deletingId === c.id ? '…' : 'Yes'}
+                </button>
+                <button
+                  onClick={() => setConfirmingId(null)}
+                  disabled={deletingId === c.id}
+                  className="px-2 py-0.5 text-[11px] rounded hover:bg-accent text-muted-foreground disabled:opacity-50"
+                >
+                  No
+                </button>
               </div>
-              <div className="text-[11px] text-muted-foreground mt-0.5">
-                {new Date(c.created_at).toLocaleDateString()}
-              </div>
-            </div>
-          </button>
+            ) : (
+              <button
+                onClick={() => setActive(c.id)}
+                className="w-full text-left px-3 py-2 flex items-start gap-2.5"
+              >
+                <MessageSquare className="h-4 w-4 mt-0.5 shrink-0 opacity-70" />
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium truncate">{c.label ?? 'Untitled'}</div>
+                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                    {new Date(c.created_at).toLocaleDateString()}
+                  </div>
+                </div>
+                <button
+                  onClick={e => { e.stopPropagation(); setConfirmingId(c.id) }}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-destructive/10 hover:text-destructive text-muted-foreground shrink-0 mt-0.5"
+                  title="Delete conversation"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </button>
+            )}
+          </div>
         ))}
       </div>
 

@@ -5,6 +5,7 @@ import {
   getTree,
   getMessages,
   createThread as apiCreateThread,
+  deleteThread as apiDeleteThread,
 } from '@/lib/api'
 
 interface FlowEdge {
@@ -40,6 +41,8 @@ interface StoreState {
   finalizeStream: (thread_id: string, messages: Message[]) => void
   setNodePosition: (thread_id: string, pos: { x: number; y: number }) => void
   addMergeArtifact: (message: Message) => void
+  deleteThread: (thread_id: string) => Promise<void>
+  updateThreadLabel: (thread_id: string, label: string) => void
 }
 
 // Recursive tree layout: root at (100, 300), children spread around parent y.
@@ -50,7 +53,7 @@ function layoutNode(
   positions: Record<string, { x: number; y: number }>
 ) {
   positions[node.thread.id] = { x, y }
-  const childX = x + 480
+  const childX = x + 600
   const n = node.children.length
   node.children.forEach((child, i) => {
     const childY = y + (i - (n - 1) / 2) * 340
@@ -72,6 +75,11 @@ export const useStore = create<StoreState>((set, get) => ({
   loadConversations: async () => {
     const convos = await getRootThreads()
     set({ conversations: convos })
+    if (convos.length === 0) {
+      await get().createConversation()
+    } else {
+      await get().setActiveConversation(convos[0].id)
+    }
   },
 
   setActiveConversation: async (id: string) => {
@@ -149,7 +157,7 @@ export const useStore = create<StoreState>((set, get) => ({
       messages: { ...state.messages, [thread.id]: [] },
       nodePositions: {
         ...state.nodePositions,
-        [thread.id]: { x: parentPos.x + 480, y: parentPos.y + 160 },
+        [thread.id]: { x: parentPos.x + 600, y: parentPos.y + 160 },
       },
       flowEdges: [
         ...state.flowEdges,
@@ -211,5 +219,39 @@ export const useStore = create<StoreState>((set, get) => ({
         ],
       },
     }))
+  },
+
+  updateThreadLabel: (thread_id: string, label: string) => {
+    set(state => ({
+      threads: state.threads[thread_id]
+        ? { ...state.threads, [thread_id]: { ...state.threads[thread_id], label } }
+        : state.threads,
+      conversations: state.conversations.map(c =>
+        c.id === thread_id ? { ...c, label } : c
+      ),
+    }))
+  },
+
+  deleteThread: async (thread_id: string) => {
+    const { deleted } = await apiDeleteThread(thread_id)
+    const deletedSet = new Set(deleted)
+    const currentActiveId = get().activeConversationId
+
+    set(state => ({
+      threads: Object.fromEntries(Object.entries(state.threads).filter(([id]) => !deletedSet.has(id))),
+      messages: Object.fromEntries(Object.entries(state.messages).filter(([id]) => !deletedSet.has(id))),
+      nodePositions: Object.fromEntries(Object.entries(state.nodePositions).filter(([id]) => !deletedSet.has(id))),
+      conversations: state.conversations.filter(c => !deletedSet.has(c.id)),
+      flowEdges: state.flowEdges.filter(e => !deletedSet.has(e.source) && !deletedSet.has(e.target)),
+    }))
+
+    if (currentActiveId && deletedSet.has(currentActiveId)) {
+      const remaining = get().conversations
+      if (remaining.length > 0) {
+        await get().setActiveConversation(remaining[0].id)
+      } else {
+        set({ activeConversationId: null })
+      }
+    }
   },
 }))

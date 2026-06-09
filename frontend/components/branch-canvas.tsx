@@ -53,26 +53,31 @@ function CanvasInner() {
           position: nodePositions[t.id] ?? { x: 100, y: 300 },
           data: { thread: t },
           dragHandle: '.drag-handle',
-          width: 360,
+          width: 600,
         }))
       )
-      setTimeout(() => fitView({ padding: 0.15, duration: 400, minZoom: 0.75 }), 80)
+      setTimeout(() => fitView({ padding: 0.25, duration: 400, minZoom: 0.3, maxZoom: 0.75 }), 80)
     } else {
-      // Only add nodes that weren't present before (from fork)
       const newThreads = threadValues.filter(t => !prevThreadIds.current.has(t.id))
-      if (newThreads.length > 0) {
+      const removedIds = [...prevThreadIds.current].filter(id => !currentIds.has(id))
+      if (newThreads.length > 0 || removedIds.length > 0) {
         prevThreadIds.current = currentIds
-        setNodes(prev => [
-          ...prev,
-          ...newThreads.map(t => ({
-            id: t.id,
-            type: 'thread' as const,
-            position: nodePositions[t.id] ?? { x: 100, y: 300 },
-            data: { thread: t },
-            dragHandle: '.drag-handle',
-            width: 360,
-          })),
-        ])
+        const removedSet = new Set(removedIds)
+        setNodes(prev => {
+          const kept = removedSet.size > 0 ? prev.filter(n => !removedSet.has(n.id)) : prev
+          if (newThreads.length === 0) return kept
+          return [
+            ...kept,
+            ...newThreads.map(t => ({
+              id: t.id,
+              type: 'thread' as const,
+              position: nodePositions[t.id] ?? { x: 100, y: 300 },
+              data: { thread: t },
+              dragHandle: '.drag-handle',
+              width: 600,
+            })),
+          ]
+        })
       }
     }
   }, [threads, activeConversationId, nodePositions, setNodes, fitView])
@@ -109,7 +114,7 @@ function CanvasInner() {
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         fitView
-        fitViewOptions={{ padding: 0.15, minZoom: 0.75 }}
+        fitViewOptions={{ padding: 0.25, minZoom: 0.3, maxZoom: 0.75 }}
         minZoom={0.4}
         maxZoom={1.75}
         proOptions={{ hideAttribution: true }}
