@@ -27,17 +27,35 @@ export async function* sendMessage(
 
   const reader = response.body!.getReader()
   const decoder = new TextDecoder()
+  let buffer = ''
+
   while (true) {
     const { done, value } = await reader.read()
     if (done) break
-    for (const line of decoder.decode(value).split('\n')) {
-      if (!line.startsWith('data: ')) continue
-      const data = line.slice(6)
+
+    buffer += decoder.decode(value, { stream: true })
+
+    // Split on double-newline to get complete SSE events; keep any trailing
+    // incomplete event in the buffer for the next read.
+    const events = buffer.split('\n\n')
+    buffer = events.pop() ?? ''
+
+    for (const event of events) {
+      // Collect all data: lines and rejoin — handles multi-line chunks (e.g.
+      // Claude responses containing newlines inside a single streamed token).
+      const dataLines = event
+        .split('\n')
+        .filter(l => l.startsWith('data: '))
+        .map(l => l.slice(6))
+      if (dataLines.length === 0) continue
+
+      const data = dataLines.join('\n')
       if (data === '[DONE]') continue
       if (data.startsWith('[LABEL:') && data.endsWith(']')) {
         onLabel?.(data.slice(7, -1))
         continue
       }
+      if (data.startsWith('[ERROR]')) continue
       yield data
     }
   }
@@ -99,6 +117,18 @@ export async function getMessages(thread_id: string): Promise<Message[]> {
   const res = await fetch(`${BACKEND_URL}/api/threads/${thread_id}/messages`, { headers })
   if (!res.ok) throw new Error(`Fetch messages failed: ${res.statusText}`)
   return res.json()
+}
+
+export async function multiMergeBack(branch_thread_ids: string[]): Promise<Message> {
+  const headers = await getAuthHeader()
+  const res = await fetch(`${BACKEND_URL}/api/multi-merge`, {
+    method: 'POST',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ branch_thread_ids }),
+  })
+  if (!res.ok) throw new Error(`Multi-merge failed: ${res.statusText}`)
+  const data = await res.json()
+  return data.message
 }
 
 export async function deleteThread(thread_id: string): Promise<{ deleted: string[] }> {

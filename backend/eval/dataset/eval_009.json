@@ -1,0 +1,95 @@
+{
+  "id": "eval_009",
+  "type": "multi_branch",
+  "description": "LLM long-document handling: Branch A favors RAG/retrieval; Branch B favors in-context compression. Direct tradeoff with different conclusions.",
+  "fork_point_index": 1,
+  "parent_context": [
+    {
+      "role": "user",
+      "content": "How do LLMs handle documents that are longer than their context window? We're building a research assistant that needs to process 100-page PDFs."
+    },
+    {
+      "role": "assistant",
+      "content": "There are two main families of approaches: retrieval-augmented generation (RAG), which chunks the document and retrieves relevant pieces at query time, and in-context compression, which reduces the document to fit within the window. Both have real tradeoffs and the field is still evolving rapidly."
+    }
+  ],
+  "branches": [
+    {
+      "label": "RAG Retrieval Approach",
+      "context": [
+        {
+          "role": "user",
+          "content": "How do LLMs handle documents that are longer than their context window? We're building a research assistant that needs to process 100-page PDFs."
+        },
+        {
+          "role": "assistant",
+          "content": "There are two main families of approaches: retrieval-augmented generation (RAG), which chunks the document and retrieves relevant pieces at query time, and in-context compression, which reduces the document to fit within the window. Both have real tradeoffs and the field is still evolving rapidly."
+        },
+        {
+          "role": "user",
+          "content": "Tell me more about the RAG approach \u2014 how does chunking work in practice?"
+        },
+        {
+          "role": "assistant",
+          "content": "In RAG, the document is split into chunks \u2014 typically 256 to 512 tokens with some overlap \u2014 then each chunk is embedded and stored in a vector database. At query time, the user's question is embedded and the most semantically similar chunks are retrieved and stuffed into the context window alongside the query. Dense passage retrieval (DPR) and models like ColBERT can improve retrieval quality significantly. For 100-page PDFs this scales well: the vector store handles documents of any length and retrieval latency stays low. The main limitation is that retrieved chunks are decontextualized \u2014 if the answer requires synthesizing information spread across the whole document, no single chunk will contain it."
+        },
+        {
+          "role": "user",
+          "content": "Is RAG the best approach for research PDFs specifically?"
+        },
+        {
+          "role": "assistant",
+          "content": "For most research PDF use cases, yes \u2014 RAG is currently the best-validated approach. The academic literature on scientific QA (e.g., NaturalQuestions, PubMedQA benchmarks) shows that well-tuned RAG systems consistently outperform full-document approaches once documents exceed roughly 32K tokens. Semantic chunking \u2014 splitting at sentence or section boundaries rather than fixed token counts \u2014 dramatically improves retrieval precision for structured documents like papers. The key engineering challenge is chunk size tuning: too small and you lose context, too large and retrieval recall drops."
+        }
+      ]
+    },
+    {
+      "label": "In-Context Compression Approach",
+      "context": [
+        {
+          "role": "user",
+          "content": "How do LLMs handle documents that are longer than their context window? We're building a research assistant that needs to process 100-page PDFs."
+        },
+        {
+          "role": "assistant",
+          "content": "There are two main families of approaches: retrieval-augmented generation (RAG), which chunks the document and retrieves relevant pieces at query time, and in-context compression, which reduces the document to fit within the window. Both have real tradeoffs and the field is still evolving rapidly."
+        },
+        {
+          "role": "user",
+          "content": "What about in-context compression \u2014 does it actually work well?"
+        },
+        {
+          "role": "assistant",
+          "content": "More than people expect, especially for moderate-length documents. LLMLingua and its successors can compress documents to 10-20% of their original token count with surprisingly little quality loss on QA tasks \u2014 often under 5% accuracy drop. The key advantage over RAG is narrative coherence: compression preserves the document's relational structure, so the model can reason about how section 2 relates to section 7, which RAG chunks completely destroy. For a research assistant processing academic papers, this matters a lot \u2014 scientific arguments are non-local."
+        },
+        {
+          "role": "user",
+          "content": "So compression might be better than RAG for research papers?"
+        },
+        {
+          "role": "assistant",
+          "content": "For documents under ~50K tokens, yes, I'd seriously consider it. The compression approach keeps the document's logical flow intact, which is critical when the user's question requires understanding argument structure rather than just locating a fact. RAG is fundamentally a lookup system; compression preserves reasoning chains. The practical ceiling is around 50K tokens \u2014 beyond that, compression quality degrades and you're back to RAG territory. Hybrid approaches are emerging: compress each section independently, then retrieve at the section level. This gives you the coherence benefit within sections and RAG's scalability across them."
+        }
+      ]
+    }
+  ],
+  "ideal_merge": "The two branches surface a genuine tradeoff: RAG scales to documents of any length and is better validated on benchmarks, but fundamentally treats retrieval as lookup and loses cross-document reasoning. In-context compression preserves narrative and argument structure \u2014 which matters for research papers \u2014 but quality degrades past ~50K tokens. For 100-page PDFs (~75K tokens), a hybrid approach (compress at the section level, retrieve across sections) is likely the best current option.",
+  "key_conclusions": {
+    "consensus": [
+      "neither approach works perfectly beyond the context window without tradeoffs",
+      "chunk/section boundaries matter more than fixed token counts"
+    ],
+    "branch_a_unique": [
+      "RAG scales to any document length via vector store",
+      "semantic chunking improves retrieval precision for structured documents"
+    ],
+    "branch_b_unique": [
+      "compression preserves narrative coherence and cross-section reasoning",
+      "compression quality degrades past roughly 50K tokens"
+    ],
+    "contradictions": [
+      "Branch A concludes RAG is best for research PDFs; Branch B argues compression is better for moderate-length documents because it preserves argument structure that RAG destroys"
+    ]
+  },
+  "candidate_merge": "## Synthesis: Long Document Processing Approaches\n\n### Consensus Findings\n- **Scale threshold**: Both branches agree that around 32-50K tokens marks a critical transition point where approach effectiveness shifts\n- **Document structure matters**: Academic papers benefit from preserving logical relationships between sections\n- **Hybrid solutions emerging**: Multiple branches noted section-level processing as a promising middle ground\n\n### Key Divergence\n**Best approach for research PDFs:**\n- RAG branch: Well-validated superiority for academic literature, backed by benchmark data (NaturalQuestions, PubMedQA)\n- Compression branch: Better narrative coherence for argument-based reasoning, but practical limits around 50K tokens\n\n### Strongest Unique Insights\n\n**From RAG exploration:**\nSemantic chunking at sentence/section boundaries (vs. fixed token counts) dramatically improves retrieval precision for structured documents.\n\n**From compression exploration:**\nRAG is fundamentally a lookup system while compression preserves reasoning chains \u2014 the distinction matters when questions require understanding argument structure rather than fact location.\n\n### Practical Implication\nFor 100-page PDFs: Start with RAG using semantic chunking, but consider section-level compression for documents with complex argumentative structure under the 50K token threshold."
+}

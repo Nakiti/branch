@@ -1,0 +1,95 @@
+{
+  "id": "eval_011",
+  "type": "multi_branch",
+  "description": "Distributed DB consistency: Branch A uses CAP theorem framing and concludes CP; Branch B uses PACELC and recommends eventual consistency. Framework disagreement with opposing recommendations.",
+  "fork_point_index": 1,
+  "parent_context": [
+    {
+      "role": "user",
+      "content": "We're designing a distributed database for a financial ledger \u2014 it needs to track account balances across 5 regions. What consistency model should we use?"
+    },
+    {
+      "role": "assistant",
+      "content": "For a financial ledger the consistency choice is critical \u2014 getting it wrong means either incorrect balances or unacceptable availability. The two main theoretical frameworks for reasoning about this are CAP theorem and PACELC, and they lead to somewhat different analyses of your situation."
+    }
+  ],
+  "branches": [
+    {
+      "label": "CAP Theorem Analysis",
+      "context": [
+        {
+          "role": "user",
+          "content": "We're designing a distributed database for a financial ledger \u2014 it needs to track account balances across 5 regions. What consistency model should we use?"
+        },
+        {
+          "role": "assistant",
+          "content": "For a financial ledger the consistency choice is critical \u2014 getting it wrong means either incorrect balances or unacceptable availability. The two main theoretical frameworks for reasoning about this are CAP theorem and PACELC, and they lead to somewhat different analyses of your situation."
+        },
+        {
+          "role": "user",
+          "content": "Walk me through the CAP theorem analysis for our use case."
+        },
+        {
+          "role": "assistant",
+          "content": "CAP says a distributed system can guarantee at most two of: Consistency, Availability, and Partition Tolerance. Since network partitions are inevitable across 5 geographic regions, you must choose between C and A. For a financial ledger, the choice is clear: you need CP \u2014 consistency over availability. Reading a stale balance and allowing a double-spend or overdraft is a correctness failure that regulators and customers will not tolerate. A brief period of unavailability during a partition is far preferable. Systems like Google Spanner and CockroachDB implement CP with distributed transactions and are purpose-built for exactly this use case."
+        },
+        {
+          "role": "user",
+          "content": "What are the practical implications of choosing CP for our 5-region deployment?"
+        },
+        {
+          "role": "assistant",
+          "content": "In practice, CP means using a consensus protocol like Paxos or Raft to elect a leader for each partition of your data, with writes requiring quorum acknowledgment before being committed. For 5 regions with a majority quorum, you can tolerate 2 region failures. Write latency will be dominated by the slowest region in the quorum \u2014 typically 50-150ms cross-region. You can tune read latency by allowing stale reads from local replicas for non-critical queries, but balance-affecting operations must always go through the consensus path. This is the model CockroachDB and Spanner use successfully for financial applications."
+        }
+      ]
+    },
+    {
+      "label": "PACELC Framework Analysis",
+      "context": [
+        {
+          "role": "user",
+          "content": "We're designing a distributed database for a financial ledger \u2014 it needs to track account balances across 5 regions. What consistency model should we use?"
+        },
+        {
+          "role": "assistant",
+          "content": "For a financial ledger the consistency choice is critical \u2014 getting it wrong means either incorrect balances or unacceptable availability. The two main theoretical frameworks for reasoning about this are CAP theorem and PACELC, and they lead to somewhat different analyses of your situation."
+        },
+        {
+          "role": "user",
+          "content": "What does PACELC say about this, and why is it a better framework than CAP?"
+        },
+        {
+          "role": "assistant",
+          "content": "PACELC extends CAP by noting that partitions are rare \u2014 most of the time your system is running normally, and even then you face a latency vs consistency tradeoff. PACELC says: during a Partition choose A or C (same as CAP); during normal operation (Else), choose Latency or Consistency. CAP only addresses the partition case, which makes it misleading \u2014 production systems fail due to latency-driven timeouts far more often than true partitions. For a financial ledger, PACELC forces you to separately answer: what do you do during a partition (C), AND what do you do normally (L vs C)? These can have different answers."
+        },
+        {
+          "role": "user",
+          "content": "So what's your recommendation under the PACELC framework?"
+        },
+        {
+          "role": "assistant",
+          "content": "Under PACELC, I'd actually recommend a PA/EL system (available under partition, low latency during normal operation) with application-level conflict resolution \u2014 essentially an eventual consistency model like DynamoDB's. Here's why: true network partitions across your 5 regions are rare and brief. The much more common problem is cross-region write latency: requiring quorum for every balance update adds 100-200ms to every transaction, which compounds badly at scale. Instead, write locally and replicate asynchronously, use version vectors to detect conflicts, and resolve them with domain-specific logic (e.g., last-write-wins for deposits, reservation-based locking for withdrawals). This is harder to build but significantly more performant at steady state."
+        }
+      ]
+    }
+  ],
+  "ideal_merge": "The branches use different theoretical frameworks and reach opposite recommendations. Branch A applies CAP theorem and concludes CP (strong consistency) is mandatory for a financial ledger \u2014 a balance correctness failure is worse than unavailability. Branch B applies PACELC and argues CP's cross-region quorum latency (100-200ms per write) is impractical at scale; it recommends eventual consistency with domain-specific conflict resolution. PACELC is strictly more complete than CAP, so Branch B's framework is more accurate \u2014 but the conclusion depends on write volume and latency tolerance. For a ledger with regulatory compliance requirements, the CP path is safer; for a high-throughput system where latency SLAs matter more, Branch B's eventual consistency approach is worth the engineering cost.",
+  "key_conclusions": {
+    "consensus": [
+      "network partitions must be planned for across 5 geographic regions",
+      "consistency and latency are in fundamental tension in distributed systems"
+    ],
+    "branch_a_unique": [
+      "CP (strong consistency) is required for financial ledgers to prevent double-spend",
+      "CockroachDB and Spanner implement CP for financial applications successfully"
+    ],
+    "branch_b_unique": [
+      "PACELC is more complete than CAP because it addresses the normal-operation latency tradeoff",
+      "quorum writes add 100-200ms cross-region latency that compounds at scale"
+    ],
+    "contradictions": [
+      "Branch A recommends CP (strong consistency, higher latency); Branch B recommends PA/EL (eventual consistency, lower latency with application-level conflict resolution)"
+    ]
+  },
+  "candidate_merge": "# SYNTHESIS: Consistency Model Analysis\n\n## Consensus Across Branches\n- **Financial correctness is paramount** - both frameworks agree incorrect balances are unacceptable\n- **5-region geography creates fundamental tradeoffs** - distance and network realities impose constraints regardless of theoretical model\n- **Quorum-based systems can tolerate 2 region failures** - mathematical reality of majority consensus\n\n## Key Divergence\n**Fundamentally different recommendations:**\n- **CAP analysis \u2192 CP system** (CockroachDB/Spanner model): Sacrifice availability during partitions to guarantee consistency\n- **PACELC analysis \u2192 PA/EL system** (DynamoDB model): Sacrifice strong consistency for better normal-case latency, handle conflicts at application layer\n\n**Root cause of divergence:** CAP focuses on rare partition scenarios while PACELC emphasizes the everyday latency vs consistency tradeoff that dominates real operations.\n\n## Strongest Unique Insights\n\n### From CAP Branch\n**Quorum write latency is bounded by slowest region** - In CP systems, every write waits for the 3rd-slowest region to respond, making performance predictably tied to your worst network path.\n\n### From PACELC Branch  \n**Production failures come from timeouts, not partitions** - Systems fail due to latency-driven timeouts during normal operation far more often than true network partitions, making normal-case optimization more critical than partition handling."
+}

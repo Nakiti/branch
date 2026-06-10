@@ -12,10 +12,19 @@ from dotenv import load_dotenv
 
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
-from judge import score_synthesis
+from judge import score_synthesis, score_multi_synthesis
 
 
-async def run_eval(dataset_dir: str | None = None) -> list[dict]:
+def _avg(results: list[dict], dims: list[str]) -> dict:
+    if not results:
+        return {}
+    return {
+        dim: round(sum(r["scores"][dim] for r in results if dim in r["scores"]) / len(results), 2)
+        for dim in dims
+    }
+
+
+async def run_eval(dataset_dir: str | None = None) -> dict:
     if dataset_dir is None:
         dataset_dir = os.path.join(os.path.dirname(__file__), "dataset")
 
@@ -24,35 +33,50 @@ async def run_eval(dataset_dir: str | None = None) -> list[dict]:
 
     if not cases:
         print(f"No eval cases found in {dataset_dir}", file=sys.stderr)
-        return []
+        return {}
 
     results = []
     for filepath in cases:
         with open(filepath) as f:
             case = json.load(f)
 
-        print(f"Evaluating {case['id']} ...", file=sys.stderr)
+        case_type = case.get("type", "single_branch")
+        print(f"Evaluating {case['id']} ({case_type}) ...", file=sys.stderr)
 
-        # Placeholder: in production, call the merge service to get a real synthesis.
-        # For offline eval, the dataset JSON can include a "candidate_merge" field.
         synthesis = case.get("candidate_merge", "")
 
-        scores = await score_synthesis(
-            case["parent_context"],
-            case["branch_context"],
-            synthesis,
-            case["ideal_merge"],
-        )
+        if case_type == "multi_branch":
+            scores = await score_multi_synthesis(
+                case["parent_context"],
+                case["branches"],
+                synthesis,
+                case["ideal_merge"],
+                case.get("key_conclusions"),
+            )
+        else:
+            scores = await score_synthesis(
+                case["parent_context"],
+                case["branch_context"],
+                synthesis,
+                case["ideal_merge"],
+                case.get("key_conclusions"),
+            )
 
-        results.append({"id": case["id"], "scores": scores})
+        results.append({"id": case["id"], "type": case_type, "scores": scores})
 
-    avg = {
-        "coverage": sum(r["scores"]["coverage"] for r in results) / len(results),
-        "precision": sum(r["scores"]["precision"] for r in results) / len(results),
-        "coherence": sum(r["scores"]["coherence"] for r in results) / len(results),
+    single = [r for r in results if r["type"] != "multi_branch"]
+    multi = [r for r in results if r["type"] == "multi_branch"]
+
+    single_dims = ["coverage", "precision", "coherence", "recall"]
+    multi_dims = ["consensus", "divergence", "per_branch_insight", "precision", "coherence", "recall"]
+
+    return {
+        "results": results,
+        "averages": {
+            "single_branch": _avg(single, single_dims),
+            "multi_branch": _avg(multi, multi_dims),
+        },
     }
-
-    return {"results": results, "averages": avg}
 
 
 if __name__ == "__main__":

@@ -47,7 +47,11 @@ async def _stream_chat(thread_id: str, user_content: str, label_needed: bool = F
         ) as stream:
             async for text in stream.text_stream:
                 full_response.append(text)
-                yield f"data: {text}\n\n"
+                # SSE spec: each newline inside the payload must start a new
+                # data: line, otherwise the client's data:-prefix filter drops
+                # continuation lines (breaking code blocks, lists, etc.).
+                encoded = text.replace('\n', '\ndata: ')
+                yield f"data: {encoded}\n\n"
     except Exception as e:
         yield f"data: [ERROR] {str(e)}\n\n"
         return

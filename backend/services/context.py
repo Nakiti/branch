@@ -79,6 +79,20 @@ async def _reconstruct_core(
     return truncated + own_messages
 
 
+async def reconstruct_context_up_to_message(
+    thread_id: str,
+    stop_message_id: str,
+) -> list[dict]:
+    """Return reconstruct_context(thread_id) truncated at stop_message_id (inclusive)."""
+    full = await reconstruct_context(thread_id)
+    truncated: list[dict] = []
+    for msg in full:
+        truncated.append(msg)
+        if msg["id"] == stop_message_id:
+            break
+    return truncated
+
+
 async def reconstruct_context(thread_id: str) -> list[dict]:
     """Return the full ordered message list for thread_id.
 

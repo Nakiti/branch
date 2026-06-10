@@ -1,0 +1,95 @@
+{
+  "id": "eval_013",
+  "type": "multi_branch",
+  "description": "Go vs Rust for a new networking service: Branch A favors Go on velocity and operability; Branch B favors Rust on memory safety for security-critical services. Security threat model splits the recommendation.",
+  "fork_point_index": 1,
+  "parent_context": [
+    {
+      "role": "user",
+      "content": "We're choosing between Go and Rust for a new public-facing API gateway. The team has Go experience but not Rust. What are the main considerations?"
+    },
+    {
+      "role": "assistant",
+      "content": "Both are strong choices for a networking service and clearly superior to C/C++ for a greenfield project. The decision comes down to three axes: memory safety model (GC vs ownership), ecosystem maturity for networking, and team velocity given your existing Go background. Let me explore each."
+    }
+  ],
+  "branches": [
+    {
+      "label": "Go: Velocity and Operability",
+      "context": [
+        {
+          "role": "user",
+          "content": "We're choosing between Go and Rust for a new public-facing API gateway. The team has Go experience but not Rust. What are the main considerations?"
+        },
+        {
+          "role": "assistant",
+          "content": "Both are strong choices for a networking service and clearly superior to C/C++ for a greenfield project. The decision comes down to three axes: memory safety model (GC vs ownership), ecosystem maturity for networking, and team velocity given your existing Go background. Let me explore each."
+        },
+        {
+          "role": "user",
+          "content": "Make the case for Go \u2014 why would it be the right choice for our API gateway?"
+        },
+        {
+          "role": "assistant",
+          "content": "Go's case is strong and practical. The networking stdlib is exceptional \u2014 net/http, net, crypto/tls are production-grade and battle-tested at Google scale. The goroutine model maps naturally to connection handling: spawning a goroutine per connection or request is idiomatic, cheap (2KB stack), and has been proven at massive scale by Cloudflare, Dropbox, and others. Compile times are fast (seconds, not minutes), which compounds into significantly faster iteration cycles for a team that's already proficient. The GC pause times in Go 1.17+ are sub-millisecond for typical API workloads, so latency impact is negligible. You'll ship a correct, maintainable service faster."
+        },
+        {
+          "role": "user",
+          "content": "What about the memory safety argument for Rust \u2014 doesn't that matter for a public-facing service?"
+        },
+        {
+          "role": "assistant",
+          "content": "Go's GC already eliminates use-after-free and double-free bugs \u2014 the most dangerous memory safety class. The CVEs that Rust prevents over Go are primarily in FFI code (calling C libraries) or unsafe blocks, which you can simply avoid. A pure-Go API gateway with no unsafe code has a safety profile close to Rust in practice. The real question is: does your threat model include an adversary sophisticated enough to exploit the narrow class of bugs Rust eliminates but Go doesn't? For most API gateways, the answer is no \u2014 logic bugs, auth flaws, and injection vulnerabilities are far more common attack vectors, and neither language helps with those."
+        }
+      ]
+    },
+    {
+      "label": "Rust: Memory Safety for Public Services",
+      "context": [
+        {
+          "role": "user",
+          "content": "We're choosing between Go and Rust for a new public-facing API gateway. The team has Go experience but not Rust. What are the main considerations?"
+        },
+        {
+          "role": "assistant",
+          "content": "Both are strong choices for a networking service and clearly superior to C/C++ for a greenfield project. The decision comes down to three axes: memory safety model (GC vs ownership), ecosystem maturity for networking, and team velocity given your existing Go background. Let me explore each."
+        },
+        {
+          "role": "user",
+          "content": "Make the case for Rust \u2014 why would it be the right choice for a public-facing API gateway?"
+        },
+        {
+          "role": "assistant",
+          "content": "The security argument for Rust in public-facing services is compelling and underappreciated. Memory safety vulnerabilities \u2014 buffer overflows, use-after-free, data races \u2014 account for ~70% of critical CVEs in Microsoft and Google's analyses of their C/C++ codebases. Go's GC prevents many of these, but not all: data races in Go (concurrent map writes, channel misuse) are runtime panics, not compile-time errors, and can be exploited for DoS or information leakage. Rust's ownership model eliminates an entire class of concurrency bugs at compile time. For a public-facing API gateway parsing untrusted input at the network edge, that compile-time guarantee matters. The NSA and CISA have both explicitly recommended memory-safe languages for internet-facing services, and Rust is the only systems language that satisfies this rigorously."
+        },
+        {
+          "role": "user",
+          "content": "Is the Rust ecosystem mature enough for this use case?"
+        },
+        {
+          "role": "assistant",
+          "content": "Yes, for networking specifically. Tokio is a production-grade async runtime used by AWS, Discord, and Cloudflare. Hyper is the HTTP engine underlying reqwest and many production gateways. Axum provides ergonomic routing on top of Hyper with tower middleware compatibility. The TLS ecosystem (rustls) is arguably better than Go's crypto/tls because it's written entirely in safe Rust with no C dependencies, which closes the FFI attack surface. The main friction is the learning curve: Rust's ownership model takes 2-4 weeks to internalize. But once the team is past that, productivity on a well-scoped service like an API gateway is comparable to Go. The initial velocity cost is a one-time investment."
+        }
+      ]
+    }
+  ],
+  "ideal_merge": "The branches split on threat model and time horizon. Branch A: Go's GC eliminates the most dangerous memory safety bugs, compile times are fast, and a team with existing Go expertise ships faster \u2014 the marginal safety gain from Rust over Go is small for typical API workloads. Branch B: For a public-facing internet service parsing untrusted input, Rust's compile-time memory and concurrency safety guarantees matter \u2014 Go data races are runtime errors, not compile-time errors, and NSA/CISA guidance explicitly favors rigorous memory-safe languages at the network edge. The synthesis: if the team's Rust ramp-up time (2-4 weeks) is acceptable and security is a primary concern (public-facing, parsing untrusted data), Rust's safety model justifies the initial velocity cost; if iteration speed is critical or the threat model is lower-risk, Go's existing team expertise wins.",
+  "key_conclusions": {
+    "consensus": [
+      "both Go and Rust are clearly better than C/C++ for a new networking service",
+      "the Rust networking ecosystem (tokio, hyper, axum) is production-mature"
+    ],
+    "branch_a_unique": [
+      "Go GC eliminates use-after-free and double-free without ownership complexity",
+      "existing Go team expertise produces faster iteration and fewer ramp-up bugs"
+    ],
+    "branch_b_unique": [
+      "Go data races are runtime panics not compile-time errors and can be exploited for DoS",
+      "NSA and CISA guidance recommends rigorous memory-safe languages for internet-facing services"
+    ],
+    "contradictions": [
+      "Branch A says Go's GC is sufficient and Rust's marginal safety gain is not worth the velocity cost; Branch B says compile-time memory and concurrency guarantees are worth the ramp-up for a public-facing service parsing untrusted input"
+    ]
+  },
+  "candidate_merge": "# Synthesis: Go vs Rust for API Gateway\n\n## Consensus Points\n- **Both are viable**: Either language will produce a secure, performant API gateway superior to C/C++\n- **Ecosystem maturity**: Both have production-grade networking stacks (Go stdlib vs Tokio/Hyper)\n- **Memory safety baseline**: Both eliminate the most dangerous memory vulnerabilities that plague C/C++\n\n## Key Divergences\n- **Risk assessment**: Go branch argues memory safety gaps are narrow/irrelevant for most threat models; Rust branch emphasizes compile-time guarantees matter for public-facing services\n- **Velocity tradeoffs**: Go branch prioritizes immediate team productivity; Rust branch frames learning curve as one-time investment\n- **Safety scope**: Go branch focuses on practical attack vectors; Rust branch emphasizes eliminating entire vulnerability classes\n\n## Strongest Unique Insights\n\n### From Go Branch\n**Threat model specificity**: \"Does your adversary have the sophistication to exploit the narrow class of bugs Rust prevents but Go doesn't?\" Most API gateway attacks target logic/auth flaws, not memory safety gaps.\n\n### From Rust Branch  \n**Concurrency safety gap**: Go's data race protection is runtime-based (panics), while Rust prevents races at compile time. For high-concurrency public services, this distinction becomes operationally significant beyond just security."
+}

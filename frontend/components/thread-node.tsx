@@ -6,7 +6,7 @@ import { GitBranch, GitMerge, Minus, Maximize2, Send, Trash2 } from 'lucide-reac
 import ReactMarkdown from 'react-markdown'
 import { cn } from '@/lib/utils'
 import { useStore } from '@/store/useStore'
-import { sendMessage, forkThread, mergeBack, getMessages } from '@/lib/api'
+import { sendMessage, forkThread, mergeBack, multiMergeBack, getMessages } from '@/lib/api'
 import { supabase } from '@/lib/supabase'
 import type { ThreadNodeData, Message } from '@/types'
 
@@ -69,7 +69,9 @@ function MessageRow({
           <div className="mt-2 pt-2 border-t border-merge-bubble-foreground/15 flex items-center gap-2 text-[11px]">
             <span className="inline-flex items-center gap-1 font-medium">
               <GitMerge className="h-3 w-3" />
-              Merged from: {sourceLabel ?? 'branch'}
+              {(message.merge_source_thread_ids?.length ?? 0) > 1
+                ? `Merged from ${message.merge_source_thread_ids!.length} branches`
+                : `Merged from: ${sourceLabel ?? 'branch'}`}
             </span>
           </div>
         )}
@@ -125,6 +127,67 @@ function MergePopover({
   )
 }
 
+function MultiMergePopover({
+  branchIds,
+  onConfirm,
+  onClose,
+  isMerging,
+}: {
+  branchIds: string[]
+  onConfirm: (selectedIds: string[]) => void
+  onClose: () => void
+  isMerging: boolean
+}) {
+  const threads = useStore(s => s.threads)
+  const [selected, setSelected] = useState<Set<string>>(new Set(branchIds))
+
+  const toggle = (id: string) =>
+    setSelected(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+
+  return (
+    <div className="absolute top-full right-0 mt-2 w-72 bg-popover border border-border rounded-lg shadow-card-hover p-3 z-50">
+      <div className="text-[13px] font-medium text-foreground mb-1">Compare branches</div>
+      <div className="text-[11px] text-muted-foreground mb-2">
+        Select branches to synthesize into this thread:
+      </div>
+      <div className="space-y-1.5 mb-3">
+        {branchIds.map(id => (
+          <label key={id} className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={selected.has(id)}
+              onChange={() => toggle(id)}
+              disabled={isMerging}
+              className="accent-primary"
+            />
+            <span className="text-[12px] truncate">{threads[id]?.label ?? 'Branch'}</span>
+          </label>
+        ))}
+      </div>
+      <div className="flex justify-end gap-2">
+        <button
+          onClick={onClose}
+          disabled={isMerging}
+          className="px-2.5 py-1 text-[11px] rounded-md hover:bg-accent text-muted-foreground disabled:opacity-50"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={() => onConfirm([...selected])}
+          disabled={isMerging || selected.size < 2}
+          className="px-2.5 py-1 text-[11px] rounded-md bg-primary text-primary-foreground hover:bg-primary/90 font-medium disabled:opacity-50"
+        >
+          {isMerging ? 'Merging…' : 'Synthesize'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function DeletePopover({
   label,
   onConfirm,
@@ -168,6 +231,8 @@ function ThreadNodeImpl({ id, data }: NodeProps<ThreadNodeData>) {
   const [mergePopover, setMergePopover] = useState(false)
   const [deletePopover, setDeletePopover] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [multiMergePopover, setMultiMergePopover] = useState(false)
+  const [isMultiMerging, setIsMultiMerging] = useState(false)
   const [size, setSize] = useState({ width: 600, height: 500 })
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -186,9 +251,12 @@ function ThreadNodeImpl({ id, data }: NodeProps<ThreadNodeData>) {
   const updateThreadLabel = useStore(s => s.updateThreadLabel)
 
   const liveThread = useStore(s => s.threads[id])
+  const flowEdges = useStore(s => s.flowEdges)
   const isStreaming = streamingThreadId === id
   const isRoot = data.thread.fork_source_message_id === null
   const label = liveThread?.label ?? data.thread.label
+  const branchChildIds = flowEdges.filter(e => e.source === id).map(e => e.target)
+  const hasMultipleBranches = branchChildIds.length >= 2
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -284,6 +352,19 @@ function ThreadNodeImpl({ id, data }: NodeProps<ThreadNodeData>) {
     }
   }
 
+  const handleMultiMerge = async (selectedIds: string[]) => {
+    setIsMultiMerging(true)
+    try {
+      const artifact = await multiMergeBack(selectedIds)
+      addMergeArtifact(artifact)
+      setMultiMergePopover(false)
+    } catch (e) {
+      console.error('Multi-merge failed:', e)
+    } finally {
+      setIsMultiMerging(false)
+    }
+  }
+
   const handleDelete = async () => {
     setIsDeleting(true)
     try {
@@ -336,6 +417,25 @@ function ThreadNodeImpl({ id, data }: NodeProps<ThreadNodeData>) {
                   onConfirm={handleMerge}
                   onClose={() => setMergePopover(false)}
                   isMerging={isMerging}
+                />
+              )}
+            </>
+          )}
+          {hasMultipleBranches && (
+            <>
+              <button
+                onClick={() => { setMultiMergePopover(v => !v); setMergePopover(false); setDeletePopover(false) }}
+                className="text-[11px] flex items-center gap-1 px-2 py-0.5 rounded-md text-primary hover:bg-accent font-medium nodrag"
+              >
+                <GitMerge className="h-3 w-3" />
+                Compare
+              </button>
+              {multiMergePopover && (
+                <MultiMergePopover
+                  branchIds={branchChildIds}
+                  onConfirm={handleMultiMerge}
+                  onClose={() => setMultiMergePopover(false)}
+                  isMerging={isMultiMerging}
                 />
               )}
             </>

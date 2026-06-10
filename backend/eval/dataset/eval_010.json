@@ -1,0 +1,95 @@
+{
+  "id": "eval_010",
+  "type": "multi_branch",
+  "description": "Startup 409A equity grants: Branch A says grant early (low strike price); Branch B says wait (IRS reclassification risk). Direct contradiction.",
+  "fork_point_index": 1,
+  "parent_context": [
+    {
+      "role": "user",
+      "content": "We're a Series A startup. Should we grant ISO options to new engineers now, or wait until after our next fundraise? The 409A is about 8 months old."
+    },
+    {
+      "role": "assistant",
+      "content": "This is a timing decision with real tax implications for your employees. The core tension is between granting early at a lower strike price (better for employees) versus granting after a new 409A appraisal that reflects a higher post-round valuation (cleaner fair market value basis). Both approaches have legitimate arguments."
+    }
+  ],
+  "branches": [
+    {
+      "label": "Grant Early",
+      "context": [
+        {
+          "role": "user",
+          "content": "We're a Series A startup. Should we grant ISO options to new engineers now, or wait until after our next fundraise? The 409A is about 8 months old."
+        },
+        {
+          "role": "assistant",
+          "content": "This is a timing decision with real tax implications for your employees. The core tension is between granting early at a lower strike price (better for employees) versus granting after a new 409A appraisal that reflects a higher post-round valuation (cleaner fair market value basis). Both approaches have legitimate arguments."
+        },
+        {
+          "role": "user",
+          "content": "What's the case for granting now while the 409A is still valid?"
+        },
+        {
+          "role": "assistant",
+          "content": "The case is compelling: every month you delay is optionality your engineers don't get. A 409A is valid for 12 months (or until a material event), so an 8-month-old appraisal is still legally defensible. If you expect your valuation to increase significantly at the next round, granting now at the current lower FMV means employees get a lower strike price and more potential spread on exercise. For early-stage companies the difference can be material \u2014 a strike of $1.50/share now versus $4.00/share post-Series B is real money. Standard practice at most VC-backed startups is to grant frequently and not wait for the next round."
+        },
+        {
+          "role": "user",
+          "content": "Are there any risks to using an 8-month-old 409A?"
+        },
+        {
+          "role": "assistant",
+          "content": "Minimal if no material events have occurred. The IRS considers a 409A stale if more than 12 months have passed or if there's been a material change in circumstances (new financing round, significant revenue inflection, acquisition interest). At 8 months with no material event, you're fine. The bigger risk would be granting *after* a material event without refreshing \u2014 that's the scenario that creates IRS exposure. Grant now, refresh the 409A before the next round closes, and grant again post-round for any subsequent hires."
+        }
+      ]
+    },
+    {
+      "label": "Wait for New 409A",
+      "context": [
+        {
+          "role": "user",
+          "content": "We're a Series A startup. Should we grant ISO options to new engineers now, or wait until after our next fundraise? The 409A is about 8 months old."
+        },
+        {
+          "role": "assistant",
+          "content": "This is a timing decision with real tax implications for your employees. The core tension is between granting early at a lower strike price (better for employees) versus granting after a new 409A appraisal that reflects a higher post-round valuation (cleaner fair market value basis). Both approaches have legitimate arguments."
+        },
+        {
+          "role": "user",
+          "content": "What's the risk of using a stale 409A from 8 months ago?"
+        },
+        {
+          "role": "assistant",
+          "content": "The IRS scrutinizes 409A valuations aggressively and service providers (the appraisal firms) often undervalue companies to win business on price. If you're actively fundraising at a significantly higher valuation than your current 409A \u2014 which is common \u2014 the IRS can argue that the 409A didn't reflect true FMV at grant date. If options are reclassified as below-FMV grants, employees owe ordinary income tax on the discount at vesting plus a 20% excise tax under 409A. This is rare in practice but the liability falls on the employee, not the company, which creates serious morale and legal risk."
+        },
+        {
+          "role": "user",
+          "content": "So you'd recommend waiting?"
+        },
+        {
+          "role": "assistant",
+          "content": "If you're in active fundraising conversations and have a reasonable expectation the round closes within 1-2 months, yes \u2014 wait. Get a fresh 409A done immediately after close and grant at that FMV. The higher strike price is real, but it comes with clean legal standing and eliminates the reclassification risk entirely. The employees lose some potential spread, but they also avoid any 409A tax liability. For hires who need grants now and can't wait, you can issue RSAs (restricted stock awards) at current fair value as an alternative to options \u2014 they have different tax treatment and don't carry the same 409A exposure."
+        }
+      ]
+    }
+  ],
+  "ideal_merge": "The branches directly contradict each other on the core question. Branch A argues an 8-month 409A is legally sound and granting now maximizes employee upside \u2014 delay is unnecessary optionality loss. Branch B argues that if you're in active fundraising at a materially higher valuation, the existing 409A may not reflect true FMV, creating IRS reclassification risk that falls on employees (20% excise tax). The right call depends on whether a material event has effectively already occurred: if you're in term sheet negotiations, wait and get a fresh 409A; if fundraising is speculative, grant now.",
+  "key_conclusions": {
+    "consensus": [
+      "409A timing has real tax implications for employees",
+      "a fresh 409A should be obtained after any financing round closes"
+    ],
+    "branch_a_unique": [
+      "8-month-old 409A is legally valid if no material event has occurred",
+      "granting early gives employees lower strike price and more potential spread"
+    ],
+    "branch_b_unique": [
+      "active fundraising at higher valuation may invalidate current 409A FMV",
+      "reclassification risk falls on employees as ordinary income plus 20% excise tax"
+    ],
+    "contradictions": [
+      "Branch A says grant now; Branch B says wait \u2014 the disagreement hinges on whether active fundraising constitutes a material change in circumstances"
+    ]
+  },
+  "candidate_merge": "## Synthesis of Branch Explorations\n\n### Consensus Points\n- **Legal validity**: An 8-month-old 409A is still legally defensible (12-month safe harbor)\n- **Core tradeoff**: Lower strike price (employee benefit) vs. cleaner legal standing (risk mitigation)\n- **Material events matter**: Active fundraising at higher valuations changes the risk calculus\n- **Employee liability**: 409A violations create tax burden for employees, not the company\n\n### Key Divergence\n**Risk assessment of current timing:**\n- **Grant now branch**: Minimal risk since no material event has occurred; standard practice is frequent granting\n- **Wait branch**: Significant risk if actively fundraising at higher valuations; IRS can reclassify grants as below-FMV\n\n### Strongest Unique Insights\n\n**From Grant Early branch:**\n\"Every month you delay is optionality your engineers don't get\" \u2014 emphasizes the compounding cost of inaction on employee wealth creation.\n\n**From Wait branch:**  \nRSAs (restricted stock awards) as an immediate alternative for critical hires who can't wait \u2014 different tax treatment without 409A exposure, providing a middle-ground solution.\n\n### Synthesis Implication\nThe decision hinges on whether you're actively fundraising. If not in process: grant now. If fundraising at materially higher valuation: wait 1-2 months or use RSAs for urgent cases."
+}

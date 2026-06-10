@@ -43,6 +43,14 @@ class MergeResponse(BaseModel):
     message: dict
 
 
+class MultiMergeRequest(BaseModel):
+    branch_thread_ids: list[str]
+
+
+class MultiMergeResponse(BaseModel):
+    message: dict
+
+
 class TreeNode(BaseModel):
     thread: Thread
     fork_message_id: Optional[str] = None

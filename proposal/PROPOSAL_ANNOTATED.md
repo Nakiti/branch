@@ -25,7 +25,7 @@ AI: Anthropic Claude API
 
 Deployment: Vercel (frontend), Railway (backend)
 > **(b) Planned to be implemented.** The target deployment is still Vercel (frontend) and Railway (backend). Environment variable wiring is in place (`FRONTEND_URL` in backend CORS config, `NEXT_PUBLIC_BACKEND_URL` in frontend). Not yet confirmed live.
-
+> **(a) implemented as written** 
 
 ### First Deliverable
 A logged in user can have a conversation with the LLM, fork any message into a new branch, continue both the original and new branches independently, and then trigger a "merge back" that synthesizes the the branch's conversation into a contextual message in the parent thread or new thread. 
@@ -71,10 +71,18 @@ A logged in user can have a conversation with the LLM, fork any message into a n
 > **(a) Partially Implemented** The React Flow infinite canvas renders the full branch tree with one node per thread and bezier edges connecting each branch to its parent thread. Thread position on the canvas is persisted in the Zustand store and nodes are draggable. This ended up being central to the UX rather than a stretch goal.
 
 - Auto suggested branch naming by Claude
+> **(a) Implemented as written** There are two code paths that handle thread/branch naming. Branch threads are handled by backend/routes/fork.py which calls generate_label(). Tis creates the label for the new thread, stores the label in the DB, and returns it to the frontend. Root conversations are handlded by backend/routes/chat.py, which detects the first message of a root thread, and then creats a label after the assistant responds
 
 - Conflict detection - where the conversation of one branch contradicts the conversation of another branch
+> **(c) Implemented in a changed form** Rather than automatic detection, conlflict surfacing is triggered by the user through a multi branch merge feature. When a thread node has 2+ branch children, a "Compare branches" button appears in its header. Clicking it opens a popever to select which branches to synthesize together. /api/multi-merge and backend/routes/merge.py reconstructs the branch context and then calls synthesize_multi_merge() with the existing MULTI_MERGE_PROMPT. 
 
 - Eval harness
 > **(a) Implemented as written.** `backend/eval/` contains a dataset of hand-labeled examples (`dataset/`), an LLM-as-judge scorer (`judge.py`) that rates each synthesis on Coverage, Precision, and Coherence (1–5 each), and a harness entry point (`run_eval.py`).
 
 - Branch suggestion - Claude detects when a chat within a conversation is a tangent and prompts the user to branch
+> **(c) Not implemented** This was dropped in favour of the multi-branch merge feature, which allows for divergent branches to be merged back into a parent branch. Implementing this would have been expensive in terms of token usage, or involved semantic embeddings which would have been complex to implement given the scope of my project. 
+
+---------
+
+### Features added beyond original proposal
+- **Delete conversations and branch nodes** - New api endpoint to delete convo and all related chat nodes, or just delete a singular node
