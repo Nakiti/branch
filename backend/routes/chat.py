@@ -9,7 +9,7 @@ from services.context import reconstruct_context
 router = APIRouter()
 
 MODEL = "claude-sonnet-4-20250514"
-MAX_TOKENS = 1024
+MAX_TOKENS = 8192
 
 _LABEL_PROMPT = """Generate a very short conversation title (2-5 words, title case) based on the user's first message. Capture the main topic or question. Reply with ONLY the title, nothing else.
 
