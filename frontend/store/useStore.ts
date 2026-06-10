@@ -7,7 +7,7 @@ import {
   createThread as apiCreateThread,
   deleteThread as apiDeleteThread,
 } from '@/lib/api'
-
+//stupid
 interface FlowEdge {
   id: string
   source: string
