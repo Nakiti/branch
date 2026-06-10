@@ -2,6 +2,8 @@
 
 Branch is a conversational AI app built on an infinite canvas. Each chat thread is a node on the canvas. You can fork any message into a new independent thread — a new node appears connected to its parent by a bezier edge. Both threads continue independently with their own context. You can also "merge back" — synthesizing insights from a branch into the parent thread as a special merge artifact message.
 
+Production Link: https://branch-wheat.vercel.app/
+
 ## Features
 
 - **Infinite canvas** — chat threads rendered as draggable nodes via React Flow
